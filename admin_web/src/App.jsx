@@ -1,9 +1,14 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MapContainer, Marker, TileLayer, ZoomControl, useMap } from 'react-leaflet'
 import L from 'leaflet'
-import { Activity, AlertTriangle, Bell, Camera, Check, ChevronRight, Clock3, Crosshair, Filter, Layers3, List, LoaderCircle, MapPin, Menu, Radio, Shield, Siren, Users, Video, X } from 'lucide-react'
+import { Activity, AlertTriangle, Bell, Camera, Check, ChevronRight, Clock3, Crosshair, Filter, Layers3, List, LoaderCircle, MapPin, Menu, Radio, Share2, Shield, Siren, Users, Video, X } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 import './App.css'
+import './p4/styles/p4.css'
+import { EvidenceReconstructionPage } from './p4/pages/EvidenceReconstructionPage'
+import { InformationPropagationPage } from './p4/pages/InformationPropagationPage'
+import { VerificationPage } from './p4/pages/VerificationPage'
+import { AdvisoriesPage } from './p4/pages/AdvisoriesPage'
 
 const demoIncidents = [
   { id: 'INC001', type: 'Crowd Anomaly', location: 'Gate 3, Mumbai', latitude: 19.076, longitude: 72.8777, severity: 'HIGH', confidence: .91, density: 86, velocity: .24, status: 'ACTIVE', timestamp: '18:21', description: 'Abnormally high crowd density detected with reduced movement velocity.', camera: 'Camera 03 · Gate 3' },
@@ -149,11 +154,18 @@ function App() {
   const counts = useMemo(() => incidents.reduce((acc, i) => { const severity = (i.severity || 'LOW').toUpperCase(); acc.total++; acc[severity] = (acc[severity] || 0) + 1; return acc }, { total: 0 }), [incidents])
   const visible = incidents.filter((i) => filter === 'ALL' || (i.severity || '').toUpperCase() === filter)
   const activeCount = incidents.filter((i) => (i.status || '').toUpperCase() === 'ACTIVE').length
-  const navigate = (to) => { window.history.pushState({}, '', to); setRoute(to); setMenuOpen(false) }
+  const [navState, setNavState] = useState({})
+  const navigate = (to, state = {}) => { window.history.pushState({}, '', to); setRoute(to); setNavState(state); setMenuOpen(false) }
   const choose = useCallback((item) => { setSelected(item); setMapFocus(item); if (item.latitude != null && item.longitude != null) document.querySelector('.map-panel')?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'nearest' }) }, [])
   const cycleFilter = () => setFilter((current) => ({ ALL: 'HIGH', HIGH: 'MEDIUM', MEDIUM: 'LOW', LOW: 'ALL' })[current] || 'ALL')
 
-  const links = [{ path: '/dashboard', label: 'Dashboard', Icon: Layers3 }, { path: '/evidence', label: 'Evidence Reconstruction', Icon: Video }, { path: '/verification', label: 'Information Verification', Icon: Activity }, { path: '/advisories', label: 'Advisories', Icon: Bell }]
+  const links = [
+    { path: '/dashboard', label: 'Dashboard', Icon: Layers3 },
+    { path: '/evidence', label: 'Evidence Reconstruction', Icon: Video },
+    { path: '/propagation', label: 'Information Propagation', Icon: Share2 },
+    { path: '/verification', label: 'Information Verification', Icon: Activity },
+    { path: '/advisories', label: 'Advisories', Icon: Bell }
+  ]
   return <div className="app-shell">
     <header className="topbar">
       <button className="mobile-menu" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle navigation" aria-expanded={menuOpen}><Menu size={21}/></button>
@@ -168,7 +180,15 @@ function App() {
         <nav>{links.map(({ path, label, Icon }) => <button key={path} className={`nav-item ${route === path ? 'active' : ''}`} onClick={() => navigate(path)}><Icon size={20}/><span>{label}</span></button>)}</nav>
         <div className="nav-foot"><div className="foot-icon"><Activity size={21}/></div><span>India Safer<br/>Together</span><ChevronRight size={17}/></div>
       </aside>
-      {route !== '/dashboard' ? <main className="placeholder-page"><div className="placeholder-icon"><Shield size={28}/></div><span className="eyebrow">SURAKSHA · COMMAND CENTER</span><h2>{links.find((x) => x.path === route)?.label || 'Page'}</h2><p>This workspace is ready for the evidence, verification, and advisory modules.</p><button className="back-button" onClick={() => navigate('/dashboard')}>Return to dashboard <ChevronRight size={16}/></button></main> : <main className="dashboard">
+      {route === '/evidence' ? (
+        <EvidenceReconstructionPage onNavigate={navigate} />
+      ) : route === '/propagation' ? (
+        <InformationPropagationPage onNavigate={navigate} />
+      ) : route === '/verification' ? (
+        <VerificationPage onNavigate={navigate} />
+      ) : route === '/advisories' ? (
+        <AdvisoriesPage onNavigate={navigate} prefillMessage={navState?.prefillMessage} />
+      ) : route !== '/dashboard' ? <main className="placeholder-page"><div className="placeholder-icon"><Shield size={28}/></div><span className="eyebrow">SURAKSHA · COMMAND CENTER</span><h2>{links.find((x) => x.path === route)?.label || 'Page'}</h2><p>This workspace is ready for the evidence, verification, and advisory modules.</p><button className="back-button" onClick={() => navigate('/dashboard')}>Return to dashboard <ChevronRight size={16}/></button></main> : <main className="dashboard">
         <section className="dashboard-intro" aria-label="Dashboard overview">
           <div><span className="intro-kicker"><i/> LIVE OPERATIONS <b>/{source === 'api' ? ' NATIONAL NETWORK' : source === 'demo' ? ' DEMO NETWORK' : ' CONNECTING'}</b></span><h2>Command overview</h2><p>See incidents as they unfold across India.</p></div>
           <div className="intro-context"><span className="context-orbit"><Activity size={18}/></span><div><b>{activeCount} ACTIVE</b><small>INCIDENTS NEED ATTENTION</small></div></div>
