@@ -40,7 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     Api.incidents().then((v) {
-      if (mounted) setState(() => all = v..sort((a, b) => a.distance.compareTo(b.distance)));
+      if (mounted) setState(() => all = v..sort((a, b) => a.displayDistance.compareTo(b.displayDistance)));
     });
   }
 

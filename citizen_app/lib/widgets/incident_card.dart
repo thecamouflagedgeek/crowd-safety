@@ -40,7 +40,7 @@ class IncidentCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(inc.type, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: kInk, height: 1.1)),
                   const SizedBox(height: 3),
-                  Text('${inc.location} · ${inc.distance.toStringAsFixed(0)} km · ${(inc.distance * 2).round()} min', style: const TextStyle(color: Colors.black54, fontSize: 13)),
+                  Text('${inc.location} · ${inc.displayDistance.toStringAsFixed(0)} km · ${inc.displayMinutes} min', style: const TextStyle(color: Colors.black54, fontSize: 13)),
                 ]),
               ),
             ]),
