@@ -1,0 +1,29 @@
+{
+  "zone_gate_3": {
+    "id": "zone_gate_3",
+    "name": "Gate 3",
+    "latitude": 19.076,
+    "longitude": 72.877,
+    "capacity": 500,
+    "camera_ids": ["camera_01", "camera_02"],
+    "description": "Primary pedestrian entry/exit gate on the north side."
+  },
+  "zone_marine_drive": {
+    "id": "zone_marine_drive",
+    "name": "Marine Drive Junction",
+    "latitude": 18.9437,
+    "longitude": 72.8236,
+    "capacity": 300,
+    "camera_ids": ["camera_02"],
+    "description": "Arterial road junction with heavy evening traffic."
+  },
+  "zone_csmt": {
+    "id": "zone_csmt",
+    "name": "CSMT Platform 4",
+    "latitude": 18.9398,
+    "longitude": 72.8355,
+    "capacity": 800,
+    "camera_ids": ["camera_01"],
+    "description": "Suburban rail platform, high footfall."
+  }
+}

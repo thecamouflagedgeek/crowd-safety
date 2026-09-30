@@ -1,0 +1,112 @@
+[
+  {
+    "id": "cctv_01",
+    "source": "CCTV",
+    "label": "CCTV Camera 01",
+    "claim": "Person density at Gate 3 rising steadily since 18:08",
+    "location": "Gate 3",
+    "timestamp": "18:12",
+    "status": "CONFIRMED",
+    "incident_id": "INC001",
+    "credibility": 0.92
+  },
+  {
+    "id": "cctv_02",
+    "source": "CCTV",
+    "label": "CCTV Camera 02",
+    "claim": "Crowd movement velocity at Gate 3 falling below normal",
+    "location": "Gate 3",
+    "timestamp": "18:19",
+    "status": "CONFIRMED",
+    "incident_id": "INC001",
+    "credibility": 0.90
+  },
+  {
+    "id": "citizen_C014",
+    "source": "Citizen",
+    "label": "Citizen Report C014",
+    "claim": "Heavy crowd congestion near Gate 3",
+    "location": "Gate 3",
+    "timestamp": "18:17",
+    "status": "CONFIRMED",
+    "incident_id": "INC001",
+    "credibility": 0.70
+  },
+  {
+    "id": "news_N003",
+    "source": "News",
+    "label": "News Feed N003",
+    "claim": "Event venue reports unusually large evening crowd at north gate",
+    "location": "Gate 3",
+    "timestamp": "18:20",
+    "status": "SUPPORTING",
+    "incident_id": "INC001",
+    "credibility": 0.74
+  },
+  {
+    "id": "social_S021",
+    "source": "Social",
+    "label": "Social Media S021",
+    "claim": "Posts mention crowding near Gate 3",
+    "location": "Gate 3",
+    "timestamp": "18:18",
+    "status": "UNVERIFIED",
+    "incident_id": "INC001",
+    "credibility": 0.45
+  },
+  {
+    "id": "official_A001",
+    "source": "Official",
+    "label": "Event Authority",
+    "claim": "Gate 3 congestion confirmed by on-ground staff",
+    "location": "Gate 3",
+    "timestamp": "18:21",
+    "status": "CONFIRMED",
+    "incident_id": "INC001",
+    "credibility": 0.95
+  },
+  {
+    "id": "cctv_02_acc",
+    "source": "CCTV",
+    "label": "CCTV Camera 02",
+    "claim": "Two-vehicle collision blocking the northbound lane",
+    "location": "Marine Drive Junction",
+    "timestamp": "17:48",
+    "status": "CONFIRMED",
+    "incident_id": "INC002",
+    "credibility": 0.88
+  },
+  {
+    "id": "citizen_C022",
+    "source": "Citizen",
+    "label": "Citizen Report C022",
+    "claim": "Accident at Marine Drive Junction, traffic backed up",
+    "location": "Marine Drive Junction",
+    "timestamp": "17:49",
+    "status": "CONFIRMED",
+    "incident_id": "INC002",
+    "credibility": 0.68
+  },
+  {
+    "id": "cctv_01_bag",
+    "source": "CCTV",
+    "label": "CCTV Camera 01",
+    "claim": "Stationary unaccompanied object on platform edge",
+    "location": "CSMT Platform 4",
+    "timestamp": "17:12",
+    "status": "UNDER_VALIDATION",
+    "incident_id": "INC003",
+    "credibility": 0.80
+  },
+  {
+    "id": "social_S044",
+    "source": "Social",
+    "label": "Social Media S044",
+    "claim": "Gate 3 is completely closed",
+    "location": "Gate 3",
+    "timestamp": "18:24",
+    "status": "UNVERIFIED",
+    "incident_id": "INC001",
+    "credibility": 0.30
+  }
+]

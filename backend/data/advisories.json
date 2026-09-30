@@ -1,0 +1,12 @@
+[
+  {
+    "id": "ADV001",
+    "incident_id": "INC001",
+    "message": "Severe congestion near Gate 3. Avoid the area and use Gate 5 via Road B.",
+    "severity": "HIGH",
+    "location": "Gate 3",
+    "issued_by": "Event Authority",
+    "timestamp": "18:23",
+    "status": "PUBLISHED"
+  }
+]

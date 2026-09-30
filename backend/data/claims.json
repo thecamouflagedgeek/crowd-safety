@@ -1,0 +1,42 @@
+[
+  {
+    "id": "CLM001",
+    "incident_id": "INC001",
+    "claim": "Heavy crowd congestion near Gate 3.",
+    "location": "Gate 3",
+    "source": "Citizen",
+    "timestamp": "18:17",
+    "status": "VERIFIED",
+    "confidence": 0.94
+  },
+  {
+    "id": "CLM002",
+    "incident_id": "INC001",
+    "claim": "Gate 3 is completely closed.",
+    "location": "Gate 3",
+    "source": "Citizen",
+    "timestamp": "18:24",
+    "status": "UNVERIFIED",
+    "confidence": 0.28
+  },
+  {
+    "id": "CLM003",
+    "incident_id": "INC002",
+    "claim": "Accident blocking the northbound lane at Marine Drive Junction.",
+    "location": "Marine Drive Junction",
+    "source": "Citizen",
+    "timestamp": "17:49",
+    "status": "VERIFIED",
+    "confidence": 0.83
+  },
+  {
+    "id": "CLM004",
+    "incident_id": "INC003",
+    "claim": "There is an unattended bag on CSMT Platform 4.",
+    "location": "CSMT Platform 4",
+    "source": "Citizen",
+    "timestamp": "17:13",
+    "status": "UNDER_VALIDATION",
+    "confidence": 0.61
+  }
+]

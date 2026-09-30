@@ -1,0 +1,74 @@
+[
+  {
+    "id": "INC001",
+    "type": "Crowd Anomaly",
+    "location": "Gate 3",
+    "latitude": 19.076,
+    "longitude": 72.877,
+    "severity": "HIGH",
+    "risk_score": 0.81,
+    "confidence": 0.91,
+    "density": 86,
+    "velocity": 0.24,
+    "status": "ACTIVE",
+    "timestamp": "18:21",
+    "zone_id": "zone_gate_3",
+    "camera_ids": ["camera_01", "camera_02"],
+    "factors": {
+      "density": 0.86,
+      "motion_anomaly": 0.72,
+      "persistence": 0.80,
+      "citizen_reports": 0.75
+    },
+    "guidance": "Avoid Gate 3. Use Road B to Gate 5 as the alternate exit.",
+    "updated_at": "18:21:00"
+  },
+  {
+    "id": "INC002",
+    "type": "Traffic Accident",
+    "location": "Marine Drive Junction",
+    "latitude": 18.9437,
+    "longitude": 72.8236,
+    "severity": "MEDIUM",
+    "risk_score": 0.52,
+    "confidence": 0.78,
+    "density": 34,
+    "velocity": 0.61,
+    "status": "ACTIVE",
+    "timestamp": "17:48",
+    "zone_id": "zone_marine_drive",
+    "camera_ids": ["camera_02"],
+    "factors": {
+      "density": 0.34,
+      "motion_anomaly": 0.66,
+      "persistence": 0.55,
+      "citizen_reports": 0.50
+    },
+    "guidance": "Reduce speed near Marine Drive Junction. Expect lane restrictions.",
+    "updated_at": "17:48:00"
+  },
+  {
+    "id": "INC003",
+    "type": "Unattended Baggage",
+    "location": "CSMT Platform 4",
+    "latitude": 18.9398,
+    "longitude": 72.8355,
+    "severity": "MEDIUM",
+    "risk_score": 0.55,
+    "confidence": 0.72,
+    "density": 41,
+    "velocity": 0.33,
+    "status": "UNDER_VALIDATION",
+    "timestamp": "17:12",
+    "zone_id": "zone_csmt",
+    "camera_ids": ["camera_01"],
+    "factors": {
+      "density": 0.41,
+      "motion_anomaly": 0.48,
+      "persistence": 0.62,
+      "citizen_reports": 0.60
+    },
+    "guidance": "Avoid the marked area on Platform 4. Follow station staff instructions.",
+    "updated_at": "17:12:00"
+  }
+]

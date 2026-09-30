@@ -1,0 +1,88 @@
+{
+  "INC001": [
+    {
+      "time": "18:02",
+      "event": "Normal crowd conditions",
+      "source": "Camera 01"
+    },
+    {
+      "time": "18:08",
+      "event": "Density begins increasing",
+      "source": "Camera 01"
+    },
+    {
+      "time": "18:12",
+      "event": "Movement velocity decreases",
+      "source": "Camera 01"
+    },
+    {
+      "time": "18:17",
+      "event": "Citizen report received",
+      "source": "Citizen Report C014"
+    },
+    {
+      "time": "18:19",
+      "event": "Second camera confirms congestion",
+      "source": "Camera 02"
+    },
+    {
+      "time": "18:21",
+      "event": "Incident classified HIGH",
+      "source": "Risk Engine"
+    },
+    {
+      "time": "18:23",
+      "event": "Official advisory published",
+      "source": "Event Authority"
+    },
+    {
+      "time": "18:30",
+      "event": "Crowd conditions stabilizing",
+      "source": "Camera 01"
+    }
+  ],
+  "INC002": [
+    {
+      "time": "17:44",
+      "event": "Normal traffic flow",
+      "source": "Camera 02"
+    },
+    {
+      "time": "17:48",
+      "event": "Detected abrupt motion stop at junction",
+      "source": "Camera 02"
+    },
+    {
+      "time": "17:49",
+      "event": "Citizen report received",
+      "source": "Citizen Report C022"
+    },
+    {
+      "time": "17:52",
+      "event": "Incident classified MEDIUM",
+      "source": "Risk Engine"
+    }
+  ],
+  "INC003": [
+    {
+      "time": "17:08",
+      "event": "Normal platform activity",
+      "source": "Camera 01"
+    },
+    {
+      "time": "17:12",
+      "event": "Detected stationary unaccompanied object",
+      "source": "Camera 01"
+    },
+    {
+      "time": "17:13",
+      "event": "Citizen report received",
+      "source": "Citizen Report"
+    },
+    {
+      "time": "17:15",
+      "event": "Incident placed under validation",
+      "source": "Risk Engine"
+    }
+  ]
+}
