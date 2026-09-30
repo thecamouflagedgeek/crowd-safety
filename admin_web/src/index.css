@@ -1,1 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
+
+:root{font-family:'DM Sans',sans-serif;color:#111d35;background:#f2f6fa;font-synthesis:none;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;font-optical-sizing:auto;font-weight:400}*{box-sizing:border-box}body{margin:0;min-width:360px;min-height:100vh}button{font:inherit;color:inherit;cursor:pointer}button:focus-visible{outline:3px solid #72aaff;outline-offset:2px}#root{min-height:100vh}h1,h2,h3,h4{ text-wrap:balance }p{ text-wrap:pretty }.tabular-nums{font-variant-numeric:tabular-nums}
