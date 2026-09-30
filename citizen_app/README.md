@@ -1,17 +1,13 @@
-# citizen_app
+# SafeCity — Citizen App (P1)
 
-A new Flutter project.
-
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Setup
+```bash
+flutter create citizen_app --platforms=android,ios,web   # in an empty folder
+# copy lib/ and pubspec.yaml from this project over it, then:
+flutter pub get
+flutter run                                              # mock data (default)
+flutter run --dart-define=API=http://192.168.x.x:8000    # real P3 backend, falls back to mock
+```
+Android: in `android/app/src/main/AndroidManifest.xml` add inside `<manifest>`:
+`<uses-permission android:name="android.permission.INTERNET"/>` and on `<application>`: `android:usesCleartextTraffic="true"`.
+Backend must run with `--host 0.0.0.0`.
