@@ -26,6 +26,18 @@ class GuidanceScreen extends StatelessWidget {
           builder: (_, s) {
             if (!s.hasData) return const Center(child: CircularProgressIndicator());
             final r = s.data!;
+            final route = r['route'];
+            final routeList = route is List ? route.cast<String>() : <String>[];
+            final recommended = r['recommended'] == true;
+            final reason = r['reason']?.toString() ?? '';
+            final destination = r['destination']?.toString() ?? '';
+            final severity = r['severity']?.toString() ?? '';
+            final distM = r['distance_m'];
+            final distKm = distM is num ? (distM as num).toDouble() / 1000 : null;
+            final durS = r['duration_s'];
+            final durMin = durS is num ? ((durS as num).toDouble() / 60).round() : null;
+            final engine = r['routing_engine']?.toString() ?? 'deterministic_fallback';
+
             return Padding(
               padding: const EdgeInsets.all(20),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -35,13 +47,55 @@ class GuidanceScreen extends StatelessWidget {
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     node(Icons.my_location, kBlue, 'Your location', 'Andheri, Mumbai'),
                     line(),
-                    node(Icons.close_rounded, kRed, '${r['avoid']}', '${i.severity} RISK · avoid'),
-                    line(),
-                    node(Icons.check_rounded, kGreen, '${r['via']}', 'Clear · recommended'),
+                    if (routeList.length > 1)
+                      for (int n = 1; n < routeList.length; n++)
+                        ...[node(
+                              n == routeList.length - 1 ? Icons.check_rounded : Icons.directions_rounded,
+                              n == routeList.length - 1 ? kGreen : Colors.black54,
+                              routeList[n],
+                              n == routeList.length - 1
+                                  ? '$severity RISK · recommended'
+                                  : n == 1
+                                      ? 'Avoid ${i.location}'
+                                      : 'Along the route',
+                            ), line()]
+                    else
+                      node(Icons.check_rounded, kGreen, destination, '$severity RISK · recommended'),
                   ]),
                 ),
                 const SizedBox(height: 20),
-                Text('${r['explanation']}', style: const TextStyle(fontSize: 16, height: 1.5)),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(18)),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(children: [
+                      Icon(recommended ? Icons.check_circle : Icons.info_outline, color: recommended ? kGreen : Colors.black45),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          recommended ? 'Alternate route recommended' : 'Route guidance',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ]),
+                    const SizedBox(height: 8),
+                    Text(reason, style: const TextStyle(fontSize: 15, height: 1.45)),
+                    if (distKm != null) ...[
+                      const SizedBox(height: 10),
+                      Row(children: [
+                        Icon(Icons.straighten, size: 16, color: Colors.black45),
+                        const SizedBox(width: 6),
+                        Text('${distKm.toStringAsFixed(1)} km', style: const TextStyle(fontWeight: FontWeight.w600)),
+                        const SizedBox(width: 14),
+                        Icon(Icons.timer_outlined, size: 16, color: Colors.black45),
+                        const SizedBox(width: 6),
+                        Text(durMin != null ? '$durMin min' : '—', style: const TextStyle(fontWeight: FontWeight.w600)),
+                        const Spacer(),
+                        Text('via $engine', style: TextStyle(color: Colors.black45, fontSize: 12)),
+                      ]),
+                    ],
+                  ]),
+                ),
                 const Spacer(),
                 pillButton('Ask AI about this route', () => showChat(c, i), icon: Icons.chat_bubble_outline),
               ]),
@@ -52,7 +106,9 @@ class GuidanceScreen extends StatelessWidget {
 }
 
 void showChat(BuildContext c, Incident? i) => showModalBottomSheet(
-      context: c, isScrollControlled: true, backgroundColor: Colors.transparent,
+      context: c,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (_) => ChatSheet(i),
     );
 
@@ -104,7 +160,18 @@ class _ChatSheetState extends State<ChatSheet> {
               ]),
             ),
             Row(children: [
-              Expanded(child: TextField(controller: ctl, onSubmitted: (_) => send(), decoration: InputDecoration(hintText: 'Is ${widget.i?.location ?? 'it'} safe?', filled: true, fillColor: kBg, border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none)))),
+              Expanded(
+                child: TextField(
+                  controller: ctl,
+                  onSubmitted: (_) => send(),
+                  decoration: InputDecoration(
+                    hintText: 'Is ${widget.i?.location ?? 'it'} safe?',
+                    filled: true,
+                    fillColor: kBg,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
+                  ),
+                ),
+              ),
               const SizedBox(width: 8),
               IconButton.filled(onPressed: send, icon: const Icon(Icons.arrow_upward), style: IconButton.styleFrom(backgroundColor: kBlue)),
             ]),

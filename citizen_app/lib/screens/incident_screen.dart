@@ -39,14 +39,28 @@ class IncidentScreen extends StatelessWidget {
               decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
               child: ListView(children: [
                 RiskBadge(i.severity, i.color),
+                if (i.riskScore != null) 
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Text('Risk score ${(i.riskScore! * 100).round()}%', style: const TextStyle(color: Colors.black54, fontSize: 13)),
+                  ),
                 const SizedBox(height: 10),
                 Text(i.type, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: kInk)),
-                Text('${i.location} · ${i.distance.toStringAsFixed(0)} km away', style: const TextStyle(color: Colors.black54, fontSize: 15)),
+                Text('${i.location} · ${i.displayDistance.toStringAsFixed(0)} km away', style: const TextStyle(color: Colors.black54, fontSize: 15)),
+                if (i.live) 
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 6),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      SizedBox(width: 8, height: 8, child: CircularProgressIndicator(strokeWidth: 2, color: kGreen)),
+                      SizedBox(width: 6),
+                      Text('Live CCTV feed', style: TextStyle(color: kGreen, fontSize: 12, fontWeight: FontWeight.w600)),
+                    ]),
+                  ),
                 const SizedBox(height: 18),
                 Row(children: [
                   stat('CCTV confidence', '${(i.confidence * 100).round()}%'),
                   const SizedBox(width: 10),
-                  stat(i.type.contains('Crowd') ? 'Crowd density' : 'Area impact', '${(i.density * 100).round()}%'),
+                  stat(i.type.contains('Crowd') ? 'Crowd density' : 'Area impact', '${(i.density.round()).toString()}%'),
                   const SizedBox(width: 10),
                   stat('Movement', i.movement),
                 ]),
