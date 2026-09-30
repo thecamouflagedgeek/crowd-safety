@@ -29,10 +29,15 @@ export function AdvisoryComposer({
   const [advisoryHistory, setAdvisoryHistory] = useState(SEEDED_ADVISORIES)
 
   useEffect(() => {
-    fetchAdvisoriesList().then((res) => {
+    fetchAdvisoriesList(incidentId).then((res) => {
       if (res.data) setAdvisoryHistory(res.data)
     })
-  }, [])
+  }, [incidentId])
+
+  // The verification workspace can hand us a prefilled advisory message.
+  useEffect(() => {
+    if (initialMessage) setMessage(initialMessage)
+  }, [initialMessage])
 
   const templates = [
     {

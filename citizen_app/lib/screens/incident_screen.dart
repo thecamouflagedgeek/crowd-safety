@@ -1,12 +1,30 @@
 import 'package:flutter/material.dart';
 import '../models/incident.dart';
+import '../services/api_service.dart';
 import '../theme.dart';
 import '../widgets/risk_badge.dart';
 import 'guidance_screen.dart';
 
-class IncidentScreen extends StatelessWidget {
+class IncidentScreen extends StatefulWidget {
   final Incident i;
   const IncidentScreen(this.i, {super.key});
+  @override
+  State<IncidentScreen> createState() => _IncidentScreenState();
+}
+
+class _IncidentScreenState extends State<IncidentScreen> {
+  /// Opens instantly from the list payload, then refreshes from the
+  /// authoritative GET /incidents/{id} record so severity, density and the
+  /// explanation reflect the backend's latest CV state.
+  late Incident i = widget.i;
+
+  @override
+  void initState() {
+    super.initState();
+    Api.incident(widget.i.id).then((fresh) {
+      if (mounted && fresh != null) setState(() => i = fresh);
+    });
+  }
 
   Widget stat(String label, String v) => Expanded(
         child: Container(

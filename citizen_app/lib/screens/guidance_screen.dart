@@ -22,7 +22,7 @@ class GuidanceScreen extends StatelessWidget {
   Widget build(BuildContext c) => Scaffold(
         appBar: AppBar(title: const Text('Safe route'), backgroundColor: kBg),
         body: FutureBuilder<Map>(
-          future: Api.route(i),
+          future: Api.route(i, userLat: Incident.refLat, userLon: Incident.refLon),
           builder: (_, s) {
             if (!s.hasData) return const Center(child: CircularProgressIndicator());
             final r = s.data!;

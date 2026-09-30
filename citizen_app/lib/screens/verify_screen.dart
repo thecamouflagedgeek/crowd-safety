@@ -17,9 +17,18 @@ class _VerifyScreenState extends State<VerifyScreen> {
     final claim = ctl.text.trim();
     if (claim.isEmpty) return;
     setState(() { busy = true; res = null; });
-    final r = await Api.verify(claim, location: _locationForClaim(claim));
+    final r = await Api.verify(
+      claim,
+      location: _locationForClaim(claim),
+      url: _urlForClaim(claim),
+    );
     if (mounted) setState(() { res = r; busy = false; });
   }
+
+  /// A pasted link/reel is forwarded to the backend for the record. It is never
+  /// treated as proof — the backend decides the verdict from real evidence.
+  String? _urlForClaim(String claim) =>
+      RegExp(r'https?://\S+').firstMatch(claim)?.group(0);
 
   String? _locationForClaim(String claim) {
     final lower = claim.toLowerCase();
@@ -65,7 +74,8 @@ class _VerifyScreenState extends State<VerifyScreen> {
       child: ListView(padding: const EdgeInsets.all(20), children: [
         const Text('Verify information', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: kInk)),
         const SizedBox(height: 4),
-        const Text('Paste a claim or link you saw or heard.', style: TextStyle(color: Colors.black54)),
+        const Text('Paste a claim or link you saw or heard. This checks CCTV, official and news evidence — it is not the chat assistant.',
+            style: TextStyle(color: Colors.black54, height: 1.35)),
         const SizedBox(height: 16),
         TextField(
           controller: ctl,

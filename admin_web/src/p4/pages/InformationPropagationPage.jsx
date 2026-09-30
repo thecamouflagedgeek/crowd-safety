@@ -8,14 +8,16 @@ import { PropagationGraph } from '../components/PropagationGraph'
 import { fetchSourceGraph } from '../services/api'
 import { GRAPH_NETWORK } from '../services/mockData'
 
-export function InformationPropagationPage({ onNavigate }) {
+export function InformationPropagationPage({ onNavigate, incidentId = 'INC001' }) {
   const [graphData, setGraphData] = useState(GRAPH_NETWORK)
 
   useEffect(() => {
-    fetchSourceGraph('INC001').then((res) => {
-      if (res.data) setGraphData(res.data)
+    let live = true
+    fetchSourceGraph(incidentId || 'INC001').then((res) => {
+      if (live && res.data) setGraphData(res.data)
     })
-  }, [])
+    return () => { live = false }
+  }, [incidentId])
 
   return (
     <div className="p4-workspace">
@@ -28,7 +30,7 @@ export function InformationPropagationPage({ onNavigate }) {
             INFORMATION PROPAGATION
           </h1>
           <p className="p4-page-subtitle">
-            Trace how reports and observations converged on INC001.
+            Trace how reports and observations converged on {incidentId || 'INC001'}.
           </p>
         </div>
 
@@ -45,7 +47,7 @@ export function InformationPropagationPage({ onNavigate }) {
       </div>
 
       {/* Incident Lifecycle Strip */}
-      <IncidentLifecycle currentStep="INVESTIGATING" incidentId="INC001" />
+      <IncidentLifecycle currentStep="INVESTIGATING" incidentId={incidentId || 'INC001'} />
 
       {/* The Story / Flow Kicker */}
       <div style={{

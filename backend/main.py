@@ -19,6 +19,7 @@ from fastapi.staticfiles import StaticFiles
 
 load_dotenv()
 
+import llm  # noqa: E402
 import news  # noqa: E402
 import store  # noqa: E402
 from cv import video_processor  # noqa: E402
@@ -37,7 +38,7 @@ from routes import (  # noqa: E402
 async def lifespan(app: FastAPI):
     store.load_all()
     video_processor.start_all()
-    chatbot.start_probe()
+    chatbot.start_llm_probe()
     try:
         yield
     finally:
@@ -85,6 +86,7 @@ def health() -> Dict:
             cv_model = processor.detector.model_name
             break
     news_providers = news.provider_status()
+    llm_providers = llm.provider_status()
     return {
         "status": "ok",
         "services": {
@@ -92,10 +94,15 @@ def health() -> Dict:
             "cv": cv_ok,
             "cv_backend": cv_backend,
             "cv_model": cv_model,
-            "gemini": chatbot.gemini_ok(),
+            # True only when the provider actually answered the startup probe.
+            "gemini": llm_providers["gemini"],
+            "grok": llm_providers["grok"],
             "serpapi": news_providers["serpapi"],
             "newsapi": news_providers["newsapi"],
         },
+        # Multi-model fallback chain: configured keys, model counts and the
+        # model each provider last answered with. Model names only, never keys.
+        "llm": llm.health(),
     }
 
 

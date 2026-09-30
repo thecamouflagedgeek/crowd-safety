@@ -8,7 +8,35 @@ import {
   SEEDED_ADVISORIES
 } from './mockData'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+// Single source of truth for the backend origin. App.jsx and the P4 workspaces
+// both import this, so the dashboard and the evidence pages can never point at
+// different backends (this was previously two different defaults).
+export const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '')
+
+// Camera clips live on the FastAPI static mount (/videos/{file}). Never fake a
+// URL: always resolve it against the same configured backend origin.
+export function mediaUrl(path) {
+  if (!path) return ''
+  if (/^https?:\/\//i.test(path)) return path
+  return `${API_BASE}${path.startsWith('/') ? '' : '/'}${path}`
+}
+
+// Backend claim records -> the shape the verification matrix renders.
+export function normalizeClaim(raw) {
+  if (!raw) return null
+  return {
+    id: raw.id,
+    incident_id: raw.incident_id || 'INC001',
+    claim: raw.claim || '',
+    location: raw.location || '',
+    timestamp: raw.timestamp || '',
+    status: raw.status || 'UNDER_VALIDATION',
+    confidence: typeof raw.confidence === 'number' ? raw.confidence : 0.5,
+    submitted_by: raw.validated_by || raw.source || 'Citizen Report',
+    note: raw.note || '',
+    evidenceMatrix: raw.evidenceMatrix
+  }
+}
 
 // Persistent in-memory store for newly published advisories & validation changes during session
 let runtimeAdvisories = [...SEEDED_ADVISORIES]
@@ -28,22 +56,43 @@ export async function fetchIncidents() {
   }
 }
 
+export async function fetchIncidentDetail(incidentId = 'INC001') {
+  try {
+    const res = await fetch(`${API_BASE}/incidents/${encodeURIComponent(incidentId)}`, { signal: AbortSignal.timeout(2500) })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data = await res.json()
+    return { data, isMock: false }
+  } catch (err) {
+    console.warn(`[P4 API] /incidents/${incidentId} fallback:`, err.message)
+    const seeded = INCIDENTS_LIST.find((i) => i.id === incidentId) || DEFAULT_INCIDENT
+    return {
+      data: { ...seeded, claims: SEEDED_CLAIMS.filter((c) => (c.incident_id || 'INC001') === incidentId) },
+      isMock: true,
+      error: err.message
+    }
+  }
+}
+
 export async function fetchEvidence(incidentId = 'INC001') {
   try {
     const res = await fetch(`${API_BASE}/evidence/${encodeURIComponent(incidentId)}`, { signal: AbortSignal.timeout(2500) })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const data = await res.json()
+    const timeline = data.timeline && data.timeline.length ? data.timeline : runtimeTimeline
+    const sources = data.sources && data.sources.length ? data.sources : SUPPORTING_SOURCES
     return {
       incident: data.incident || DEFAULT_INCIDENT,
-      timeline: data.timeline && data.timeline.length ? data.timeline : runtimeTimeline,
-      sources: data.sources && data.sources.length ? data.sources : SUPPORTING_SOURCES,
+      timeline,
+      sources,
+      cameras: data.cameras || [],
       metrics: data.metrics || {
         density: 86,
         velocity: 0.24,
         confidence: 0.91,
         risk_score: 0.88
       },
-      isMock: false
+      // Honest flag: the timeline/sources came from seeded data, not the API.
+      isMock: !(data.timeline && data.timeline.length)
     }
   } catch (err) {
     console.warn(`[P4 API] /evidence/${incidentId} fallback to demo data:`, err.message)
@@ -51,6 +100,7 @@ export async function fetchEvidence(incidentId = 'INC001') {
       incident: INCIDENTS_LIST.find((i) => i.id === incidentId) || DEFAULT_INCIDENT,
       timeline: runtimeTimeline,
       sources: SUPPORTING_SOURCES,
+      cameras: [],
       metrics: {
         density: 86,
         velocity: 0.24,
@@ -63,9 +113,40 @@ export async function fetchEvidence(incidentId = 'INC001') {
   }
 }
 
-export async function fetchSourceGraph(incidentId = 'INC001') {
+export async function fetchCameras() {
   try {
-    const res = await fetch(`${API_BASE}/sources/${encodeURIComponent(incidentId)}`, { signal: AbortSignal.timeout(2500) })
+    const res = await fetch(`${API_BASE}/cameras`, { signal: AbortSignal.timeout(2500) })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data = await res.json()
+    return { data, isMock: false }
+  } catch (err) {
+    console.warn('[P4 API] /cameras fallback:', err.message)
+    return { data: { cameras: [], observations: [] }, isMock: true, error: err.message }
+  }
+}
+
+// Incident/location-scoped public-safety retrieval. Every item is REPORTED.
+export async function fetchNews({ incidentId = null, location = null, intents = null, limit = 5 } = {}) {
+  try {
+    const params = new URLSearchParams()
+    if (incidentId) params.set('incident_id', incidentId)
+    if (location) params.set('location', location)
+    if (intents) params.set('intents', intents)
+    params.set('limit', String(limit))
+    const res = await fetch(`${API_BASE}/news?${params.toString()}`, { signal: AbortSignal.timeout(6000) })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data = await res.json()
+    return { data: data.items || [], providers: data.providers || {}, queries: data.queries || [], isMock: false }
+  } catch (err) {
+    console.warn('[P4 API] /news fallback:', err.message)
+    return { data: [], providers: {}, queries: [], isMock: true, error: err.message }
+  }
+}
+
+export async function fetchSourceGraph(incidentId = 'INC001', { live = false } = {}) {
+  try {
+    const query = live ? '?live=true' : ''
+    const res = await fetch(`${API_BASE}/sources/${encodeURIComponent(incidentId)}${query}`, { signal: AbortSignal.timeout(live ? 8000 : 2500) })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const data = await res.json()
     if (data.nodes && data.nodes.length) {
@@ -84,7 +165,7 @@ export async function verifyClaimRequest(payload) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(3000)
+      signal: AbortSignal.timeout(12000)
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const data = await res.json()
@@ -105,6 +186,8 @@ export async function verifyClaimRequest(payload) {
         supporting_sources: isCongestion
           ? ['CCTV Camera 01', 'CCTV Camera 02', 'Citizen Report C014', 'Event Authority']
           : ['Social Media S044'],
+        corroborating_news: [],
+        news_providers: {},
         incident_id: payload.incident_id || 'INC001',
         location: payload.location || 'Gate 3'
       },
@@ -124,14 +207,14 @@ export async function validateClaimAction(payload) {
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const data = await res.json()
-    
+
     // Update local runtime claims as well
     runtimeClaims = runtimeClaims.map(c => c.id === payload.claim_id ? { ...c, status: payload.status } : c)
     return { data, isMock: false }
   } catch (err) {
     console.warn('[P4 API] /validation fallback to local state:', err.message)
     runtimeClaims = runtimeClaims.map(c => c.id === payload.claim_id ? { ...c, status: payload.status } : c)
-    
+
     // Add audit event to local timeline
     runtimeTimeline.unshift({
       id: `audit-${Date.now()}`,
@@ -188,7 +271,7 @@ export async function publishAdvisoryRequest(payload) {
       validated_claim: 'Severe crowd congestion near Gate 3'
     }
     runtimeAdvisories.unshift(newAdvisory)
-    
+
     // Add to timeline
     runtimeTimeline.unshift({
       id: `adv-evt-${Date.now()}`,

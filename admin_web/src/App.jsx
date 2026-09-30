@@ -9,6 +9,7 @@ import { EvidenceReconstructionPage } from './p4/pages/EvidenceReconstructionPag
 import { InformationPropagationPage } from './p4/pages/InformationPropagationPage'
 import { VerificationPage } from './p4/pages/VerificationPage'
 import { AdvisoriesPage } from './p4/pages/AdvisoriesPage'
+import { API_BASE } from './p4/services/api'
 
 const demoIncidents = [
   { id: 'INC001', type: 'Crowd Anomaly', location: 'Gate 3, Mumbai', latitude: 19.076, longitude: 72.8777, severity: 'HIGH', confidence: .91, density: 86, velocity: .24, status: 'ACTIVE', timestamp: '18:21', description: 'Abnormally high crowd density detected with reduced movement velocity.', camera: 'Camera 03 · Gate 3' },
@@ -30,7 +31,6 @@ const demoIncidents = [
   { id: 'INC017', type: 'Public Gathering', location: 'India Gate, Delhi', latitude: 28.6129, longitude: 77.2295, severity: 'LOW', confidence: .75, density: 51, velocity: .65, status: 'MONITORING', timestamp: '05:36', camera: 'Camera 04 · Rajpath' },
 ]
 const severityOrder = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 }
-const apiBase = import.meta.env.VITE_API_BASE_URL || ''
 const INCIDENT_FOCUS_ZOOM = 11
 
 function sortIncidents(rows) {
@@ -38,13 +38,13 @@ function sortIncidents(rows) {
 }
 
 async function getIncidents() {
-  const response = await fetch(`${apiBase}/incidents`)
+  const response = await fetch(`${API_BASE}/incidents`)
   if (!response.ok) throw new Error(`Incident service returned ${response.status}`)
   const data = await response.json()
   return Array.isArray(data) ? data : data.incidents || []
 }
 async function getIncident(id) {
-  const response = await fetch(`${apiBase}/incidents/${encodeURIComponent(id)}`)
+  const response = await fetch(`${API_BASE}/incidents/${encodeURIComponent(id)}`)
   if (!response.ok) throw new Error(`Incident detail returned ${response.status}`)
   return response.json()
 }
@@ -181,13 +181,13 @@ function App() {
         <div className="nav-foot"><div className="foot-icon"><Activity size={21}/></div><span>India Safer<br/>Together</span><ChevronRight size={17}/></div>
       </aside>
       {route === '/evidence' ? (
-        <EvidenceReconstructionPage onNavigate={navigate} />
+        <EvidenceReconstructionPage onNavigate={navigate} incidentId={navState?.incidentId || selected?.id} />
       ) : route === '/propagation' ? (
-        <InformationPropagationPage onNavigate={navigate} />
+        <InformationPropagationPage onNavigate={navigate} incidentId={navState?.incidentId || selected?.id} />
       ) : route === '/verification' ? (
-        <VerificationPage onNavigate={navigate} />
+        <VerificationPage onNavigate={navigate} incidentId={navState?.incidentId || selected?.id} />
       ) : route === '/advisories' ? (
-        <AdvisoriesPage onNavigate={navigate} prefillMessage={navState?.prefillMessage} />
+        <AdvisoriesPage onNavigate={navigate} prefillMessage={navState?.prefillMessage} incidentId={navState?.incidentId || selected?.id} />
       ) : route !== '/dashboard' ? <main className="placeholder-page"><div className="placeholder-icon"><Shield size={28}/></div><span className="eyebrow">SURAKSHA · COMMAND CENTER</span><h2>{links.find((x) => x.path === route)?.label || 'Page'}</h2><p>This workspace is ready for the evidence, verification, and advisory modules.</p><button className="back-button" onClick={() => navigate('/dashboard')}>Return to dashboard <ChevronRight size={16}/></button></main> : <main className="dashboard">
         <section className="dashboard-intro" aria-label="Dashboard overview">
           <div><span className="intro-kicker"><i/> LIVE OPERATIONS <b>/{source === 'api' ? ' NATIONAL NETWORK' : source === 'demo' ? ' DEMO NETWORK' : ' CONNECTING'}</b></span><h2>Command overview</h2><p>See incidents as they unfold across India.</p></div>
@@ -225,7 +225,7 @@ function App() {
               <div className="detail-tags"><Severity level={selected.severity}/><span className={`status-pill status-${(selected.status || 'unknown').toLowerCase()}`}><i/>{selected.status || 'STATUS UNKNOWN'}</span></div>
               <h3>{selected.type}</h3><div className="detail-location"><MapPin size={15}/>{selected.location}</div><p className="incident-description">{selected.description || 'Incident detected by the real-time monitoring system.'}</p>
               <div className="detail-stats">{[[Camera,'Incident ID',selected.id || '—'],[Clock3,'Timestamp',selected.timestamp || '—'],[MapPin,'Location',selected.location || '—'],[Crosshair,'Latitude',Number.isFinite(Number(selected.latitude)) && selected.latitude !== null ? Number(selected.latitude).toFixed(4) : '—'],[Crosshair,'Longitude',Number.isFinite(Number(selected.longitude)) && selected.longitude !== null ? Number(selected.longitude).toFixed(4) : '—'],[Activity,'Confidence',selected.confidence == null ? '—' : `${Math.round(selected.confidence*100)}%`],[Users,'Crowd Density',selected.density == null ? '—' : `${selected.density}%`],[Activity,'Movement Velocity',selected.velocity == null ? '—' : `${selected.velocity} m/s`],[Shield,'Status',selected.status || '—']].map(([Icon,label,value]) => <div className="stat-row" key={label}><Icon size={14}/><span>{label}</span><b>{value}</b></div>)}</div>
-              <div className="quick-actions"><h4>QUICK ACTIONS <kbd>P4</kbd></h4><button onClick={() => navigate('/evidence')}><Video size={18}/>View Evidence<ChevronRight size={17}/></button><button onClick={() => navigate('/verification')}><Activity size={18}/>Verify Information<ChevronRight size={17}/></button><button onClick={() => navigate('/advisories')}><Bell size={18}/>Publish Advisory<ChevronRight size={17}/></button></div>
+              <div className="quick-actions"><h4>QUICK ACTIONS <kbd>P4</kbd></h4><button onClick={() => navigate('/evidence', { incidentId: selected.id })}><Video size={18}/>View Evidence<ChevronRight size={17}/></button><button onClick={() => navigate('/verification', { incidentId: selected.id })}><Activity size={18}/>Verify Information<ChevronRight size={17}/></button><button onClick={() => navigate('/advisories', { incidentId: selected.id })}><Bell size={18}/>Publish Advisory<ChevronRight size={17}/></button></div>
             </> : <div className="empty-detail"><MapPin size={26}/><b>{incidents.length ? 'Select an incident' : 'No incidents available'}</b><span>{incidents.length ? 'Choose an incident from the map or list to inspect its details.' : 'There are no incidents in the current feed.'}</span></div>}
           </aside>
         </section>

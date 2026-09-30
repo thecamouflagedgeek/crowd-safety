@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import {
   Video,
   ArrowRight,
@@ -12,27 +12,120 @@ import { IncidentLifecycle } from '../components/IncidentLifecycle'
 import { IncidentSelectorBar } from '../components/IncidentSelectorBar'
 import { RadialEvidenceConvergence } from '../components/RadialEvidenceConvergence'
 import { EvidenceDrawer } from '../components/EvidenceDrawer'
-import { fetchIncidents } from '../services/api'
+import { fetchIncidents, fetchEvidence, fetchSourceGraph, mediaUrl } from '../services/api'
 import { DEFAULT_INCIDENT, INCIDENTS_LIST, TIMELINE_EVENTS, CAMERAS_CONFIG } from '../services/mockData'
 
-export function EvidenceReconstructionPage({ onNavigate }) {
+// Same palette the breakdown card already used, keyed by backend source-graph node type.
+const SOURCE_COLOR = {
+  cctv: '#a7cc08',
+  citizen: '#d8f344',
+  official: '#142034',
+  news: '#c3db29',
+  social: '#eab308',
+  other: '#94a3b8'
+}
+
+// Backend /evidence timeline entries -> the forensic scrubber's node shape.
+function toTimelineNodes(entries) {
+  return (entries || []).map((item, index) => ({
+    id: item.id || `api-evt-${index}`,
+    time: item.time || item.timestamp || '',
+    timestamp: item.timestamp || item.time || '',
+    event: item.event || 'Observation',
+    source: item.source || 'CV Pipeline',
+    sourceType: /camera|cctv|flow|optical/i.test(item.source || '')
+      ? 'CCTV'
+      : /authority|command|command room|marshal/i.test(item.source || '')
+        ? 'Authority'
+        : 'Citizen',
+    severity: item.severity,
+    detail: item.detail || item.event || '',
+    verified: true
+  }))
+}
+
+export function EvidenceReconstructionPage({ onNavigate, incidentId }) {
   const [incidents, setIncidents] = useState(INCIDENTS_LIST)
-  const [selectedIncident, setSelectedIncident] = useState(DEFAULT_INCIDENT)
+  const [selectedIncident, setSelectedIncident] = useState(
+    () => INCIDENTS_LIST.find((i) => i.id === incidentId) || DEFAULT_INCIDENT
+  )
   const [selectedNode, setSelectedNode] = useState(null)
   const [drawerItem, setDrawerItem] = useState(null)
   const [activeCamIndex, setActiveCamIndex] = useState(0) // 0: Cam 01, 1: Cam 02
   const [currentTimecode, setCurrentTimecode] = useState('18:08:32')
   const [activeTimelineId, setActiveTimelineId] = useState('evt-2') // 18:08
 
+  // Live reconstruction pulled from the backend (timeline, sources, cameras, CV metrics).
+  const [evidence, setEvidence] = useState(null)
+  const [sourceGraph, setSourceGraph] = useState(null)
+  const [feedState, setFeedState] = useState('loading')
+
   // Video playback state
   const [isPlaying, setIsPlaying] = useState(true)
   const videoRef = useRef(null)
 
   useEffect(() => {
+    let live = true
     fetchIncidents().then((res) => {
-      if (res.data) setIncidents(res.data)
+      if (!live || !res.data) return
+      setIncidents(res.data)
+      setSelectedIncident((current) => {
+        const wanted = incidentId || current?.id
+        return res.data.find((i) => i.id === wanted) || res.data[0] || current
+      })
+      setFeedState(res.isMock ? 'demo' : 'api')
     })
-  }, [])
+    return () => { live = false }
+  }, [incidentId])
+
+  // Reload the whole reconstruction whenever the selected incident changes.
+  useEffect(() => {
+    const id = selectedIncident?.id
+    if (!id) return
+    let live = true
+    Promise.all([fetchEvidence(id), fetchSourceGraph(id)]).then(([ev, graph]) => {
+      if (!live) return
+      setEvidence(ev)
+      setSourceGraph(graph.data)
+      if (ev.isMock) setFeedState('demo')
+      const nodes = toTimelineNodes(ev.timeline)
+      if (nodes.length) {
+        const first = nodes[0]
+        setActiveTimelineId(first.id)
+        setCurrentTimecode(first.timestamp && first.timestamp.length > 5 ? first.timestamp : `${first.time}:00`)
+      }
+    })
+    return () => { live = false }
+  }, [selectedIncident?.id])
+
+  const timelineNodes = useMemo(() => {
+    const fromApi = toTimelineNodes(evidence?.timeline)
+    return fromApi.length ? fromApi : TIMELINE_EVENTS
+  }, [evidence])
+
+  const metrics = evidence?.metrics || {}
+  const density = metrics.density ?? selectedIncident.density
+  const confidence = metrics.confidence ?? selectedIncident.confidence
+
+  const evidenceSources = useMemo(
+    () => (sourceGraph?.nodes || []).filter((node) => node.type !== 'incident'),
+    [sourceGraph]
+  )
+
+  const cameras = useMemo(() => {
+    const labels = evidence?.cameras || []
+    return CAMERAS_CONFIG.map((cam, index) => ({
+      ...cam,
+      label: labels[index] || cam.label,
+      // Real HTTP URL served by FastAPI's /videos static mount (never a fake path).
+      streamUrl: mediaUrl(cam.streamUrl),
+      metrics: {
+        density: density == null ? cam.metrics.density : `${density}%`,
+        velocity: metrics.velocity == null ? cam.metrics.velocity : `${metrics.velocity} m/s`,
+        count: cam.metrics.count
+      }
+    }))
+  }, [evidence, density, metrics.velocity])
 
   const togglePlay = () => {
     if (!videoRef.current) return
@@ -68,7 +161,7 @@ export function EvidenceReconstructionPage({ onNavigate }) {
     setDrawerItem(evt)
   }
 
-  const activeCam = CAMERAS_CONFIG[activeCamIndex] || CAMERAS_CONFIG[0]
+  const activeCam = cameras[activeCamIndex] || cameras[0]
 
   return (
     <div className="p4-workspace">
@@ -104,7 +197,7 @@ export function EvidenceReconstructionPage({ onNavigate }) {
         incidents={incidents}
         selectedIncident={selectedIncident}
         onSelectIncident={setSelectedIncident}
-        timeRange="18:00 — 18:30"
+        timeRange={timelineNodes.length ? `${timelineNodes[0].time} — ${timelineNodes[timelineNodes.length - 1].time}` : '18:00 — 18:30'}
       />
 
       {/* THREE-COLUMN SIMPLIFIED RECONSTRUCTION GRID */}
@@ -146,7 +239,7 @@ export function EvidenceReconstructionPage({ onNavigate }) {
                 Verified Confidence
               </span>
               <div className="p4-stat-number" style={{ marginTop: 2 }}>
-                {Math.round((selectedIncident.confidence || 0.91) * 100)}%
+                {Math.round((confidence || 0) * 100)}%
               </div>
               <span style={{ fontSize: 11, color: '#047d53', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
                 <CheckCircle2 size={13} />
@@ -159,57 +252,27 @@ export function EvidenceReconstructionPage({ onNavigate }) {
           <div className="p4-panel-box">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <h3 className="p4-box-title">Evidence Breakdown</h3>
-              <span style={{ fontSize: 10, color: 'var(--ink-muted)', fontWeight: 700 }}>RELIABILITY</span>
+              <span style={{ fontSize: 10, color: 'var(--ink-muted)', fontWeight: 700 }}>RELIABILITY (BACKEND SOURCES)</span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div className="p4-source-item">
-                <div className="p4-source-left">
-                  <span className="p4-source-circle" style={{ background: '#a7cc08' }} />
-                  <span style={{ fontWeight: 700, color: 'var(--ink)' }}>CCTV Camera 01</span>
+              {evidenceSources.map((src) => (
+                <div className="p4-source-item" key={src.id}>
+                  <div className="p4-source-left">
+                    <span className="p4-source-circle" style={{ background: SOURCE_COLOR[src.type] || SOURCE_COLOR.other }} />
+                    <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{src.label}</span>
+                  </div>
+                  <span style={{ color: (src.credibility ?? 0) >= 0.7 ? '#116b4b' : '#795100', fontWeight: 800 }}>
+                    {src.credibility == null ? '—' : `${Math.round(src.credibility * 100)}%`}
+                  </span>
                 </div>
-                <span style={{ color: '#116b4b', fontWeight: 800 }}>94%</span>
-              </div>
+              ))}
+              {!evidenceSources.length && (
+                <span style={{ fontSize: 11, color: 'var(--ink-muted)' }}>
+                  No source records attributed to {selectedIncident.id} yet.
+                </span>
+              )}
 
-              <div className="p4-source-item">
-                <div className="p4-source-left">
-                  <span className="p4-source-circle" style={{ background: '#ca8a04' }} />
-                  <span style={{ fontWeight: 700, color: 'var(--ink)' }}>CCTV Camera 02</span>
-                </div>
-                <span style={{ color: '#116b4b', fontWeight: 800 }}>90%</span>
-              </div>
-
-              <div className="p4-source-item">
-                <div className="p4-source-left">
-                  <span className="p4-source-circle" style={{ background: '#d8f344' }} />
-                  <span style={{ fontWeight: 700, color: 'var(--ink)' }}>Citizen Reports</span>
-                </div>
-                <span style={{ color: '#116b4b', fontWeight: 800 }}>78%</span>
-              </div>
-
-              <div className="p4-source-item">
-                <div className="p4-source-left">
-                  <span className="p4-source-circle" style={{ background: '#142034' }} />
-                  <span style={{ fontWeight: 700, color: 'var(--ink)' }}>Ground Marshals</span>
-                </div>
-                <span style={{ color: '#116b4b', fontWeight: 800 }}>98%</span>
-              </div>
-
-              <div className="p4-source-item">
-                <div className="p4-source-left">
-                  <span className="p4-source-circle" style={{ background: '#c3db29' }} />
-                  <span style={{ fontWeight: 700, color: 'var(--ink)' }}>News Wire N003</span>
-                </div>
-                <span style={{ color: '#116b4b', fontWeight: 800 }}>74%</span>
-              </div>
-
-              <div className="p4-source-item">
-                <div className="p4-source-left">
-                  <span className="p4-source-circle" style={{ background: '#eab308' }} />
-                  <span style={{ fontWeight: 700, color: 'var(--ink)' }}>Social Media</span>
-                </div>
-                <span style={{ color: '#795100', fontWeight: 800 }}>45%</span>
-              </div>
             </div>
           </div>
         </div>
@@ -222,19 +285,21 @@ export function EvidenceReconstructionPage({ onNavigate }) {
                 MONOCHROMATIC CONVERGENCE RADAR
               </span>
               <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-secondary)' }}>
-                Multi-Source Convergence on INC001
+                Multi-Source Convergence on {selectedIncident.id}
               </div>
             </div>
 
             <div style={{ display: 'flex', gap: 6 }}>
-              <span className="p4-pill-badge yellow">GATE 3 CLUSTER</span>
-              <span className="p4-pill-badge green">ALL FEEDS SYNCED</span>
+              <span className="p4-pill-badge yellow">{(selectedIncident.location || 'ZONE').toUpperCase()} CLUSTER</span>
+              <span className={`p4-pill-badge ${feedState === 'api' ? 'green' : 'amber'}`}>
+                {feedState === 'api' ? 'LIVE BACKEND FEEDS' : feedState === 'demo' ? 'DEMO EVIDENCE DATA' : 'CONNECTING'}
+              </span>
             </div>
           </div>
 
           <RadialEvidenceConvergence
-            density={selectedIncident.density || 86}
-            confidence={Math.round((selectedIncident.confidence || 0.91) * 100)}
+            density={density || 0}
+            confidence={Math.round((confidence || 0) * 100)}
             incidentId={selectedIncident.id}
             selectedNode={selectedNode}
             onSelectNode={handleSelectNode}
@@ -376,14 +441,14 @@ export function EvidenceReconstructionPage({ onNavigate }) {
             {currentTimecode.slice(0, 5)} IST
           </div>
           <span style={{ fontSize: 10, color: 'var(--lime-deep)', fontWeight: 700 }}>
-            Window: 18:00 — 18:30
+            Window: {timelineNodes.length ? `${timelineNodes[0].time} — ${timelineNodes[timelineNodes.length - 1].time}` : '18:00 — 18:30'}
           </span>
         </div>
 
         <div className="p4-scrub-track">
           <div className="p4-track-line" />
 
-          {TIMELINE_EVENTS.map((evt) => {
+          {timelineNodes.map((evt) => {
             const isActive = activeTimelineId === evt.id
 
             return (

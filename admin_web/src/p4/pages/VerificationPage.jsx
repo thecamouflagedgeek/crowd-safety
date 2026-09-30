@@ -6,7 +6,7 @@ import {
 import { IncidentLifecycle } from '../components/IncidentLifecycle'
 import { VerificationMatrix } from '../components/VerificationMatrix'
 
-export function VerificationPage({ onNavigate }) {
+export function VerificationPage({ onNavigate, incidentId = 'INC001' }) {
   const [lifecycleStatus, setLifecycleStatus] = useState('VERIFIED')
 
   return (
@@ -37,10 +37,11 @@ export function VerificationPage({ onNavigate }) {
       </div>
 
       {/* Incident Lifecycle Strip */}
-      <IncidentLifecycle currentStep={lifecycleStatus} incidentId="INC001" />
+      <IncidentLifecycle currentStep={lifecycleStatus} incidentId={incidentId} />
 
       {/* Verification Matrix Workspace */}
       <VerificationMatrix
+        incidentId={incidentId}
         onNavigateAdvisory={(claim) =>
           onNavigate('/advisories', {
             prefillMessage: claim.suggestedAdvisory || `Official Notice: ${claim.claim}`

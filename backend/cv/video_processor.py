@@ -171,10 +171,44 @@ def _background() -> np.ndarray:
     return frame
 
 
+# Chromium/Firefox cannot decode MPEG-4 Part 2 ("mp4v" -> FMP4), so the evidence
+# clips served from /videos must be H.264 (avc1) for the authority dashboard to
+# actually play them. mp4v stays as the last-resort fallback: the CV pipeline can
+# read either codec, but a browser can only play the H.264 one.
+_BROWSER_CODECS = ("avc1", "mp4v")
+
+
+def _video_is_readable(path: Path, expect_frames: int) -> bool:
+    """Verify a freshly written clip really decodes (guards a silent encoder failure)."""
+    capture = cv2.VideoCapture(str(path))
+    try:
+        if not capture.isOpened():
+            return False
+        frames = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
+        ok, frame = capture.read()
+        return bool(ok) and frame is not None and frames >= expect_frames * 0.5
+    except Exception:
+        return False
+    finally:
+        capture.release()
+
+
 def generate_synthetic_video(path: Path, story, seed: int) -> bool:
+    """Write a deterministic crowd video, preferring a browser-playable codec."""
+    total = int(VIDEO_FPS * 16)  # ~16 seconds
+    for codec in _BROWSER_CODECS:
+        try:
+            if _render_synthetic_video(path, story, seed, codec) and _video_is_readable(path, total):
+                return True
+        except Exception:
+            continue
+    return False
+
+
+def _render_synthetic_video(path: Path, story, seed: int, codec: str) -> bool:
     """Write a deterministic crowd video (real person sprites) so YOLO has real targets."""
     try:
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        fourcc = cv2.VideoWriter_fourcc(*codec)
         writer = cv2.VideoWriter(str(path), fourcc, VIDEO_FPS, (FRAME_W, FRAME_H))
         if not writer.isOpened():
             return False

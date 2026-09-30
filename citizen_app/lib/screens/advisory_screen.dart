@@ -44,7 +44,7 @@ class _AdvisoryCard extends StatelessWidget {
   const _AdvisoryCard(this.a);
 
   Color severityColor(String sev) {
-    final s = (sev ?? '').toUpperCase();
+    final s = sev.toUpperCase();
     if (s == 'HIGH' || s == 'CRITICAL') return kRed;
     if (s == 'MEDIUM') return kAmber;
     return kGreen;

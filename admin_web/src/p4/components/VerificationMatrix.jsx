@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import {
   CheckCircle2,
   XCircle,
@@ -16,10 +16,11 @@ import {
   AlertTriangle
 } from 'lucide-react'
 import { SEEDED_CLAIMS } from '../services/mockData'
-import { validateClaimAction } from '../services/api'
+import { validateClaimAction, verifyClaimRequest, fetchIncidentDetail, normalizeClaim } from '../services/api'
 
 export function VerificationMatrix({
   claims = SEEDED_CLAIMS,
+  incidentId = 'INC001',
   onNavigateAdvisory,
   onStatusChange
 }) {
@@ -28,12 +29,74 @@ export function VerificationMatrix({
   const [activeMediaTab, setActiveMediaTab] = useState('cctv') // 'cctv' | 'news' | 'radio' | 'citizen'
   const [actionFeedback, setActionFeedback] = useState(null)
 
+  // Result of the backend verification engine for the claim currently inspected.
+  const [verification, setVerification] = useState(null)
+  const [isVerifying, setIsVerifying] = useState(false)
+  const [claimsState, setClaimsState] = useState('demo')
+
   // Video player controls
   const [isPlaying, setIsPlaying] = useState(true)
   const videoRef = useRef(null)
 
+  // Load the real claim records the backend tracks for this incident.
+  useEffect(() => {
+    let live = true
+    fetchIncidentDetail(incidentId).then((res) => {
+      if (!live) return
+      const apiClaims = (res.data?.claims || []).map(normalizeClaim).filter(Boolean)
+      if (apiClaims.length) {
+        setLocalClaims(apiClaims)
+        setActiveClaimId(apiClaims[0].id)
+        setClaimsState('api')
+      } else {
+        setClaimsState('demo')
+      }
+    })
+    return () => { live = false }
+  }, [incidentId])
+
   const currentClaim = localClaims.find((c) => c.id === activeClaimId) || localClaims[0]
   const media = currentClaim.mediaEvidence || {}
+
+  // Live/public-safety news retrieved by the backend for this claim, or the
+  // seeded press wire when nothing was retrieved.
+  const newsItems = useMemo(() => {
+    const live = verification?.corroborating_news
+    if (live && live.length) {
+      return live.map((n) => ({
+        outlet: n.label || n.provider || 'News wire',
+        status: n.status,
+        badge: `${n.status || 'REPORTED'}${n.locality_match ? ' · LOCAL' : ''}`,
+        time: n.timestamp || '',
+        headline: n.title || ''
+      }))
+    }
+    return media.news || []
+  }, [verification, media])
+
+  // Ask the backend verification engine (CCTV + official + SerpApi + NewsAPI + citizen).
+  const handleRunVerification = async () => {
+    if (!currentClaim) return
+    setIsVerifying(true)
+    setVerification(null)
+    const res = await verifyClaimRequest({
+      claim: currentClaim.claim,
+      location: currentClaim.location || undefined,
+      incident_id: currentClaim.incident_id || incidentId
+    })
+    setVerification(res.data)
+    setIsVerifying(false)
+
+    // The engine is the source of truth: reflect its verdict on the claim record,
+    // but leave the authority's manual validate/reject decision untouched.
+    setLocalClaims((prev) =>
+      prev.map((c) =>
+        c.id === currentClaim.id
+          ? { ...c, engine_status: res.data.status, engine_confidence: res.data.confidence, engine_is_mock: res.isMock }
+          : c
+      )
+    )
+  }
 
   const handleValidate = async (claim) => {
     setActionFeedback({ type: 'loading', message: `Submitting authority validation for ${claim.id}...` })
@@ -241,6 +304,57 @@ export function VerificationMatrix({
               </table>
             </div>
 
+            {/* Backend verification engine result (source of truth) */}
+            <button
+              className="p4-outline-btn"
+              style={{ justifyContent: 'center', padding: '11px', width: '100%' }}
+              onClick={handleRunVerification}
+              disabled={isVerifying}
+            >
+              <ShieldCheck size={15} />
+              <span>{isVerifying ? 'RUNNING MULTI-SOURCE VERIFICATION…' : 'RUN BACKEND VERIFICATION (CCTV + OFFICIAL + NEWS + SERP)'}</span>
+            </button>
+
+            {verification && (
+              <div style={{
+                background: 'var(--surface-soft)',
+                border: '1px solid var(--border)',
+                borderRadius: 14,
+                padding: '12px 16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--ink-muted)', letterSpacing: '0.06em' }}>
+                    BACKEND VERIFICATION ENGINE
+                  </span>
+                  <span className={`p4-pill-badge ${verification.status === 'VERIFIED' ? 'green' : verification.status === 'CONTRADICTED' ? 'red' : 'amber'}`}>
+                    {verification.status}
+                  </span>
+                  <span className="p4-pill-badge yellow">{Math.round((verification.confidence || 0) * 100)}% CONFIDENCE</span>
+                  <span className="p4-pill-badge lime">{verification.severity || 'UNKNOWN'} SEVERITY</span>
+                  {verification.isMock && <span className="p4-pill-badge red">DEMO SIMULATION — API UNREACHABLE</span>}
+                </div>
+
+                <p style={{ margin: 0, fontSize: 11.5, color: 'var(--ink)', lineHeight: 1.45 }}>
+                  <b>Impact: </b>{verification.impact || '—'}
+                </p>
+
+                <div style={{ fontSize: 11, color: 'var(--ink-secondary)' }}>
+                  <b style={{ color: 'var(--ink)' }}>Supporting sources: </b>
+                  {(verification.supporting_sources || []).length
+                    ? verification.supporting_sources.join(' · ')
+                    : 'none — nothing corroborates this claim'}
+                </div>
+
+                <div style={{ fontSize: 10.5, color: 'var(--ink-muted)' }}>
+                  Live corroboration checked with SerpApi: {verification.news_providers?.serpapi ? 'configured' : 'unavailable'} · NewsAPI:{' '}
+                  {verification.news_providers?.newsapi ? 'configured' : 'unavailable'} · Retrieved items are REPORTED only and can never verify a claim by themselves.
+                </div>
+              </div>
+            )}
+
             {/* Action Feedback Banner */}
             {actionFeedback && (
               <div style={{
@@ -430,7 +544,7 @@ export function VerificationMatrix({
           {/* TAB 2: News Outlets & Press Wire */}
           {activeMediaTab === 'news' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {(media.news || []).map((n, i) => (
+              {newsItems.map((n, i) => (
                 <div key={i} className="p4-dispatch-card">
                   <div className="p4-dispatch-header">
                     <div className="p4-dispatch-title">
@@ -447,6 +561,14 @@ export function VerificationMatrix({
                   </p>
                 </div>
               ))}
+
+              {!newsItems.length && (
+                <div className="p4-dispatch-card">
+                  <p className="p4-dispatch-body">
+                    No public-safety reports were retrieved for {currentClaim.location || 'this location'}. Run the backend verification to query SerpApi + NewsAPI.
+                  </p>
+                </div>
+              )}
 
               <div className="p4-dispatch-card" style={{ background: '#ffffff' }}>
                 <div className="p4-dispatch-header">

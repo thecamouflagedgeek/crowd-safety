@@ -6,7 +6,7 @@ import {
 import { IncidentLifecycle } from '../components/IncidentLifecycle'
 import { AdvisoryComposer } from '../components/AdvisoryComposer'
 
-export function AdvisoriesPage({ onNavigate, prefillMessage }) {
+export function AdvisoriesPage({ onNavigate, prefillMessage, incidentId = 'INC001' }) {
   const [lifecycleStep, setLifecycleStep] = useState('VERIFIED')
 
   const handlePublished = () => {
@@ -41,11 +41,11 @@ export function AdvisoriesPage({ onNavigate, prefillMessage }) {
       </div>
 
       {/* Incident Lifecycle Strip */}
-      <IncidentLifecycle currentStep={lifecycleStep} incidentId="INC001" />
+      <IncidentLifecycle currentStep={lifecycleStep} incidentId={incidentId} />
 
       {/* Advisory Composer Workspace */}
       <AdvisoryComposer
-        incidentId="INC001"
+        incidentId={incidentId}
         initialMessage={prefillMessage}
         onAdvisoryPublished={handlePublished}
       />

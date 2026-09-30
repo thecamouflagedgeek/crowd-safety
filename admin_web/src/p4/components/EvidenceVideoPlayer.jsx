@@ -12,6 +12,7 @@ import {
   AlertCircle
 } from 'lucide-react'
 import { CAMERAS_CONFIG } from '../services/mockData'
+import { mediaUrl } from '../services/api'
 
 export function EvidenceVideoPlayer({ activeTime = '18:08:32' }) {
   const [isPlaying, setIsPlaying] = useState(true)
@@ -142,7 +143,7 @@ export function EvidenceVideoPlayer({ activeTime = '18:08:32' }) {
                   <video
                     ref={videoRef}
                     className="p4-cctv-video"
-                    src={cam.streamUrl}
+                    src={mediaUrl(cam.streamUrl)}
                     autoPlay
                     loop
                     muted={isMuted}

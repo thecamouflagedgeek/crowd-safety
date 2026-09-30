@@ -55,14 +55,17 @@ class Incident {
     );
   }
 
-  /// Client-side distance in kilometres from a default reference point (Andheri,
-  /// Mumbai). Used only when the backend does not supply a distance so the map UI
-  /// still has a meaningful "X km away" reading. It is never presented as backend
-  /// data.
+  /// The citizen's assumed position (Andheri, Mumbai). Also sent to /route so the
+  /// backend can compute a real distance from the user to the safe destination.
+  static const refLat = 19.0760;
+  static const refLon = 72.8777;
+
+  /// Client-side distance in kilometres from the reference point above. Used only
+  /// when the backend does not supply a distance so the map UI still has a
+  /// meaningful "X km away" reading. It is never presented as backend data.
   double get displayDistance {
     if (distance > 0) return distance;
-    const ref = LatLng(19.0760, 72.8777);
-    return _haversineKm(lat, lon, ref.latitude, ref.longitude);
+    return _haversineKm(lat, lon, refLat, refLon);
   }
 
   /// Travel-time estimate derived from the client-side distance only.
@@ -114,12 +117,5 @@ class Incident {
           : type.contains('Accident')
               ? 'Expect delays. Take an alternate road.'
               : 'Keep clear of $location until cleared.';
-}
-
-/// Lightweight 2D point used only for client-side distance rendering.
-class LatLng {
-  final double latitude;
-  final double longitude;
-  const LatLng(this.latitude, this.longitude);
 }
 

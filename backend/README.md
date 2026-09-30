@@ -51,9 +51,17 @@ Docs: http://localhost:8000/docs   Health: http://localhost:8000/health
 
 ## Environment (`.env`)
 
+Copy `.env.example` to `.env` and fill in the keys. `.env` is gitignored.
+
 | Variable | Purpose | Default |
 | --- | --- | --- |
-| `GEMINI_API_KEY` / `GEMINI_MODEL` | Chat. Blank/invalid -> deterministic fallback. | `YOUR_KEY` |
+| `GEMINI_API_KEY` | Gemini credentials for chat. Blank/invalid -> next provider. | empty |
+| `GEMINI_MODELS` | Ordered Gemini chain (comma-separated). Empty -> built-in defaults. | empty |
+| `XAI_API_KEY` | Grok (xAI) credentials - the fallback provider after Gemini. | empty |
+| `XAI_MODELS` | Ordered Grok chain (comma-separated). Empty -> built-in defaults. | empty |
+| `XAI_BASE_URL` | xAI OpenAI-compatible base URL | `https://api.x.ai/v1` |
+| `LLM_MODEL_TIMEOUT_SECONDS` | Per-model ceiling before advancing | `15` |
+| `LLM_TOTAL_BUDGET_SECONDS` | Hard ceiling for the whole chain | `45` |
 | `SERPAPI_KEY` | Google News corroboration (SerpApi). | empty |
 | `NEWS_API_KEY` | NewsAPI.org corroboration. | empty |
 | `NEWS_WINDOW_HOURS`, `NEWS_MAX_RESULTS`, `NEWS_COUNTRY`, `NEWS_LANG` | News tuning | `72`, `5`, `in`, `en` |
@@ -64,6 +72,45 @@ Docs: http://localhost:8000/docs   Health: http://localhost:8000/health
 | `CV_PROCESS_FPS`, `CV_LOOP_VIDEO`, `CV_START_AT` | Pipeline tuning | `8`, `1`, `0.55` |
 
 Keys are read only on the server and never sent to the apps.
+
+## Multi-model LLM fallback
+
+The chatbot never depends on a single model. `backend/llm.py` resolves an ordered
+chain per provider and stops at the first model that returns usable text:
+
+```
+Gemini chain   gemini-3.8-flash -> gemini-3.7-flash -> gemini-3.6-flash
+               -> gemini-3.5-flash -> gemini-3.5-flash-lite
+                        |  (only if every Gemini model failed)
+Grok chain     grok-4.7 -> grok-4.6 -> grok-4.3
+                        |  (only if every LLM failed)
+Deterministic  incident-grounded answer from routes/chatbot.py
+```
+
+* **Every attempt is bounded.** Each model gets `LLM_MODEL_TIMEOUT_SECONDS`; the
+  whole chain is capped by `LLM_TOTAL_BUDGET_SECONDS`, so chat can never hang.
+* **Every failure advances the chain** - HTTP 400/401/403/404/429/5xx, timeout,
+  connection error, or an empty/malformed response. A single dead model is never
+  a chat failure.
+* **Logging** (stderr, never includes keys):
+
+  ```
+  WARNING [llm] [LLM FALLBACK] Gemini gemini-3.8-flash failed: 429 rate limit
+  WARNING [llm] [LLM FALLBACK] Gemini gemini-3.7-flash failed: timeout
+  INFO    [llm] [LLM] Success: Gemini gemini-3.6-flash
+  ```
+
+* **Overrides:** `GEMINI_MODELS` / `XAI_MODELS` replace a provider's chain
+  completely; leave them empty to use the built-in current chains above.
+* **Extending:** append one `_Provider` entry to `_PROVIDERS` in `llm.py`. The
+  chatbot needs no change - it only calls `generate_llm_response(prompt)`.
+* The LLM only *phrases* facts. Incident state, CV evidence, retrieval
+  (SerpApi/NewsAPI) and claim verification stay in the backend and are never
+  decided by a model.
+* `/chat` always returns `reply`, `source`, `model`, `grounded_on` and `mode`.
+  `source` is `gemini`, `grok` or `fallback`; `model` is `null` on the
+  deterministic path. Search-mode replies also carry `evidence` and
+  `retrieved_count`.
 
 ## Risk engine
 
@@ -93,7 +140,7 @@ Results are cached 10 minutes and fetched concurrently under a hard time budget.
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| GET | `/health` | API / CV / Gemini / SerpApi / NewsAPI status |
+| GET | `/health` | API / CV / LLM chain / SerpApi / NewsAPI status |
 | GET | `/incidents`, `/incidents/{id}` | Incidents (live CV severity) |
 | GET | `/cameras` | Camera config + live YOLO metrics + zone + timestamp |
 | POST | `/verify` | Multi-source verification (+ corroborating news) |
@@ -101,7 +148,7 @@ Results are cached 10 minutes and fetched concurrently under a hard time budget.
 | GET | `/sources/{id}?live=true` | Source graph (optionally + live news) |
 | POST | `/validation` | Authority claim/source validation |
 | POST | `/advisories`, GET `/advisories` | Advisory publish / retrieve |
-| POST | `/chat` | Contextual chat (Gemini or fallback) |
+| POST | `/chat` | Contextual chat (Gemini chain -> Grok chain -> deterministic) |
 | POST | `/route` | Safe route (OSRM or fallback) |
 | GET | `/news` | Incident/location public-safety news |
 | GET | `/videos/{file}` | Static camera video |
@@ -109,7 +156,7 @@ Results are cached 10 minutes and fetched concurrently under a hard time budget.
 ## Quick checks
 
 ```bash
-curl http://localhost:8000/health
+curl http://localhost:8000/health          # services + the "llm" block (chains, counts)
 curl http://localhost:8000/incidents
 curl -X POST http://localhost:8000/verify -H "Content-Type: application/json" \
   -d '{"claim":"Heavy crowd congestion near Gate 3.","location":"Gate 3"}'
