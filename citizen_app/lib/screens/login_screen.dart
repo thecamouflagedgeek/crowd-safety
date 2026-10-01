@@ -7,6 +7,8 @@ import '../widgets/bottom_nav.dart';
 import 'home_screen.dart';
 import 'verify_screen.dart';
 import 'advisory_screen.dart';
+import '../main.dart' show geoSync;
+import '../widgets/broadcast_banner.dart';
 
 const _lime = Color(0xFFE2FF3B);
 const _glass = Color(0xFF1B2B3F);
@@ -233,10 +235,14 @@ class _ShellState extends State<Shell> {
           IndexedStack(index: i, children: const [
             HomeScreen(),
             HomeScreen(listMode: true),
-            Padding(padding: EdgeInsets.only(bottom: 96), child: VerifyScreen()),
-            Padding(padding: EdgeInsets.only(bottom: 96), child: AdvisoryScreen()),
+            VerifyScreen(),
+            AdvisoryScreen(),
           ]),
           Positioned.fill(child: BottomNav(i, (v) => setState(() => i = v))),
+          Positioned(
+            top: 0, left: 0, right: 0,
+            child: SafeArea(child: BroadcastBanner(sync: geoSync)),
+          ),
         ]),
       );
 }

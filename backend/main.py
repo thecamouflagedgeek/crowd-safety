@@ -8,9 +8,12 @@ authority dashboard.
 
 from __future__ import annotations
 
+import asyncio
+import json
 import os
+import urllib.request
 from contextlib import asynccontextmanager
-from typing import Dict
+from typing import Dict, List
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -23,6 +26,12 @@ import llm  # noqa: E402
 import news  # noqa: E402
 import store  # noqa: E402
 from cv import video_processor  # noqa: E402
+from geo_alerts import (  # noqa: E402
+    configure as configure_geo_alerts,
+    dispatch_for_incident,
+    purge_expired,
+    router as geo_router,
+)
 from routes import (  # noqa: E402
     advisories,
     chatbot,
@@ -32,6 +41,52 @@ from routes import (  # noqa: E402
     route,
     verification,
 )
+import broadcast
+
+PORT = int(os.getenv("PORT", "8000"))
+
+
+# ---------------------------------------------------------------------------
+# Geo-alert wiring
+#
+# The CV pipeline already updates incidents on its own, so instead of hooking
+# into it we read the same /incidents and /advisories data the apps use. Once
+# you know the exact function behind those routes (see routes/incidents.py and
+# routes/advisories.py), replace _get_json() with a direct call, e.g.
+#   return incidents.list_incidents()
+# ---------------------------------------------------------------------------
+def _get_json(path: str):
+    with urllib.request.urlopen(f"http://127.0.0.1:{PORT}{path}", timeout=3) as r:
+        return json.loads(r.read())
+
+
+def _incident_dicts() -> List[dict]:
+    data = _get_json("/incidents")
+    return data if isinstance(data, list) else data.get("incidents", [])
+
+
+def _advisory_dicts() -> List[dict]:
+    data = _get_json("/advisories")
+    return data if isinstance(data, list) else data.get("advisories", [])
+
+
+configure_geo_alerts(incidents_fn=_incident_dicts, advisories_fn=_advisory_dicts)
+
+
+async def _alert_watcher() -> None:
+    """Every few seconds: alert opted-in citizens near HIGH/CRITICAL incidents.
+
+    dispatch_for_incident() de-duplicates per (incident, user, severity), so
+    re-checking the same incident is safe; an escalation alerts again.
+    """
+    while True:
+        await asyncio.sleep(5)  # first pass after the server is listening
+        try:
+            for inc in await asyncio.to_thread(_incident_dicts):
+                dispatch_for_incident(inc)
+            purge_expired()
+        except Exception as exc:  # never let the watcher die
+            print(f"[geo-alerts] watcher error: {exc}")
 
 
 @asynccontextmanager
@@ -39,9 +94,11 @@ async def lifespan(app: FastAPI):
     store.load_all()
     video_processor.start_all()
     chatbot.start_llm_probe()
+    watcher = asyncio.create_task(_alert_watcher())
     try:
         yield
     finally:
+        watcher.cancel()
         video_processor.stop_all()
 
 
@@ -70,7 +127,8 @@ app.include_router(advisories.router)
 app.include_router(chatbot.router)
 app.include_router(route.router)
 app.include_router(news_feed.router)
-
+app.include_router(geo_router)  # resilient geo-alert sync + SMS/push fallback
+app.include_router(broadcast.router)
 
 @app.get("/health")
 def health() -> Dict:
@@ -135,6 +193,12 @@ def root() -> Dict:
             "POST /route",
             "GET /news",
             "GET /videos/{file}",
+            "POST /citizens/sync",
+            "DELETE /citizens/{user_id}",
+            "GET /sync/snapshot",
+            "POST /reports/batch",
+            "GET /alerts/outbox",
+            "POST /alerts/simulate",
         ],
     }
 
@@ -142,4 +206,4 @@ def root() -> Dict:
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("main:app", host="0.0.0.0", port=int(os.getenv("PORT", "8000")), reload=False)
+    uvicorn.run("main:app", host="0.0.0.0", port=PORT, reload=False)

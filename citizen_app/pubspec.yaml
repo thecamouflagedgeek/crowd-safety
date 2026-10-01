@@ -13,6 +13,10 @@ dependencies:
   http: ^1.2.2
   geolocator: ^14.1.1
   video_player: ^2.14.0
+  shared_preferences: ^2.5.5
+  connectivity_plus: ^7.3.1
+  firebase_core: ^3.0.0 # for push; optional for the demo
+  firebase_messaging: ^15.0.0
 
 dev_dependencies:
   flutter_test:
@@ -29,4 +33,3 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
-    - assets/videos/

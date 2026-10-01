@@ -51,6 +51,7 @@ function Contours() {
     </svg>
   )
 }
+import GeoAlertButton from './GeoAlertModal'
 
 const demoIncidents = [
   { id: 'INC001', type: 'Crowd Anomaly', location: 'Gate 3, Mumbai', latitude: 19.076, longitude: 72.8777, severity: 'HIGH', confidence: .91, density: 86, velocity: .24, status: 'ACTIVE', timestamp: '18:21', description: 'Abnormally high crowd density detected with reduced movement velocity.', camera: 'Camera 03 · Gate 3' },
@@ -411,6 +412,7 @@ export function App() {
                   <Video size={12} />
                   <span>EVIDENCE HUB</span>
                 </button>
+                <GeoAlertButton incident={selected} />
               </div>
             </div>
 

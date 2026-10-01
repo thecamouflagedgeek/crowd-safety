@@ -10,6 +10,8 @@ import '../theme.dart';
 import '../widgets/incident_card.dart';
 import '../widgets/map_view.dart';
 import 'incident_screen.dart';
+import '../main.dart' show geoSync;
+import '../widgets/profile_sheet.dart';
 
 // ── Visual tokens ────────────────────────────────────────────────────────────
 const _lime = Color(0xFFE2FF3B);
@@ -197,15 +199,64 @@ class _HomeScreenState extends State<HomeScreen> {
       radius: 30,
       padding: const EdgeInsets.all(7),
       child: Row(children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: _lime,
-            shape: BoxShape.circle,
-            boxShadow: [BoxShadow(color: _lime.withAlpha(90), blurRadius: 14)],
-          ),
-          child: const Icon(Icons.person_rounded, color: kInk, size: 24),
+                ListenableBuilder(
+          listenable: geoSync,
+          builder: (context, _) {
+            final parts = geoSync.profileName
+                .trim()
+                .split(RegExp(r'\s+'))
+                .where((s) => s.isNotEmpty)
+                .toList();
+            final ini = parts.isEmpty
+                ? ''
+                : (parts.first[0] + (parts.length > 1 ? parts.last[0] : '')).toUpperCase();
+            final hasAlert = (geoSync.snapshot?.alerts ?? const []).isNotEmpty;
+
+            return _Press(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                showProfileSheet(context, geoSync);
+              },
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: _lime,
+                      shape: BoxShape.circle,
+                      boxShadow: [BoxShadow(color: _lime.withAlpha(90), blurRadius: 14)],
+                    ),
+                    child: ini.isEmpty
+                        ? const Icon(Icons.person_rounded, color: kInk, size: 24)
+                        : Center(
+                            child: Text(ini,
+                                style: const TextStyle(
+                                    color: kInk,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 16,
+                                    decoration: TextDecoration.none)),
+                          ),
+                  ),
+                  if (hasAlert)
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        width: 13,
+                        height: 13,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE5484D),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: _glass, width: 2),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
         ),
         const SizedBox(width: 10),
         Expanded(
