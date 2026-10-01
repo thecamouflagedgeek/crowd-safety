@@ -28,17 +28,13 @@ import numpy as np
 import store
 from cv.detector import Detector
 
-# backend/cv/video_processor.py
+
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 PROJECT_ROOT = BACKEND_DIR.parent
 
-# Actual videos live at:
-# crowd-safety/videos/
 VIDEO_DIR = PROJECT_ROOT / "videos"
 VIDEO_DIR.mkdir(parents=True, exist_ok=True)
 
-# Backend assets remain at:
-# crowd-safety/backend/assets/
 BASE_DIR = BACKEND_DIR
 ASSET_DIR = BASE_DIR / "assets"
 

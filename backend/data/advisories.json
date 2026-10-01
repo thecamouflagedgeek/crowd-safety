@@ -8,5 +8,18 @@
     "issued_by": "Event Authority",
     "timestamp": "18:23",
     "status": "PUBLISHED"
+  },
+  {
+    "id": "ADV002",
+    "incident_id": "INC001",
+    "message": "Severe congestion detected near Gate 3. Avoid the area until further notice.",
+    "severity": "HIGH",
+    "location": "Gate 3",
+    "latitude": 19.076,
+    "longitude": 72.877,
+    "issued_by": "Public Safety Command Authority",
+    "timestamp": "08:13",
+    "created_at": "2026-10-01T08:13:37",
+    "status": "PUBLISHED"
   }
 ]

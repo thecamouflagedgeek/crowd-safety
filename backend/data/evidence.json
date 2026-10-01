@@ -39,6 +39,11 @@
       "time": "18:30",
       "event": "Crowd conditions stabilizing",
       "source": "Camera 01"
+    },
+    {
+      "time": "08:13",
+      "event": "Official advisory published: Severe congestion detected near Gate 3. Avoid the area until further notice.",
+      "source": "Public Safety Command Authority"
     }
   ],
   "INC002": [
