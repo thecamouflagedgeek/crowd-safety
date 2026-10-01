@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import {
   Video, ArrowRight, ArrowUpRight, Play, Pause, RotateCcw, Maximize,
   ThumbsUp, Newspaper, Tv, Clapperboard,
@@ -8,7 +8,7 @@ import { IncidentLifecycle } from '../components/IncidentLifecycle'
 import { IncidentSelectorBar } from '../components/IncidentSelectorBar'
 import { RadialEvidenceConvergence } from '../components/RadialEvidenceConvergence'
 import { EvidenceDrawer } from '../components/EvidenceDrawer'
-import { fetchIncidents, fetchEvidence, fetchSourceGraph, mediaUrl } from '../services/api'
+import { fetchIncidents } from '../services/api'
 import { DEFAULT_INCIDENT, INCIDENTS_LIST, TIMELINE_EVENTS, CAMERAS_CONFIG } from '../services/mockData'
 import { adminVideoFor } from '../utils/adminVideos'
 import { getSourcesFor } from '../services/incidentSources'
@@ -63,40 +63,9 @@ function Contours() {
   )
 }
 
-// Same palette the breakdown card already used, keyed by backend source-graph node type.
-const SOURCE_COLOR = {
-  cctv: '#a7cc08',
-  citizen: '#d8f344',
-  official: '#142034',
-  news: '#c3db29',
-  social: '#eab308',
-  other: '#94a3b8'
-}
-
-// Backend /evidence timeline entries -> the forensic scrubber's node shape.
-function toTimelineNodes(entries) {
-  return (entries || []).map((item, index) => ({
-    id: item.id || `api-evt-${index}`,
-    time: item.time || item.timestamp || '',
-    timestamp: item.timestamp || item.time || '',
-    event: item.event || 'Observation',
-    source: item.source || 'CV Pipeline',
-    sourceType: /camera|cctv|flow|optical/i.test(item.source || '')
-      ? 'CCTV'
-      : /authority|command|command room|marshal/i.test(item.source || '')
-        ? 'Authority'
-        : 'Citizen',
-    severity: item.severity,
-    detail: item.detail || item.event || '',
-    verified: true
-  }))
-}
-
-export function EvidenceReconstructionPage({ onNavigate, incidentId }) {
+export function EvidenceReconstructionPage({ onNavigate }) {
   const [incidents, setIncidents] = useState(INCIDENTS_LIST)
-  const [selectedIncident, setSelectedIncident] = useState(
-    () => INCIDENTS_LIST.find((i) => i.id === incidentId) || DEFAULT_INCIDENT
-  )
+  const [selectedIncident, setSelectedIncident] = useState(DEFAULT_INCIDENT)
   const [selectedNode, setSelectedNode] = useState(null)
   const [drawerItem, setDrawerItem] = useState(null)
   const [activeCamIndex, setActiveCamIndex] = useState(0)
@@ -104,77 +73,14 @@ export function EvidenceReconstructionPage({ onNavigate, incidentId }) {
   const [activeTimelineId, setActiveTimelineId] = useState('evt-2')
   const [srcFilter, setSrcFilter] = useState('all')
 
-  // Live reconstruction pulled from the backend (timeline, sources, cameras, CV metrics).
-  const [evidence, setEvidence] = useState(null)
-  const [sourceGraph, setSourceGraph] = useState(null)
-  const [feedState, setFeedState] = useState('loading')
-
-  // Video playback state
   const [isPlaying, setIsPlaying] = useState(true)
   const videoRef = useRef(null)
 
   useEffect(() => {
-    let live = true
     fetchIncidents().then((res) => {
-      if (!live || !res.data) return
-      setIncidents(res.data)
-      setSelectedIncident((current) => {
-        const wanted = incidentId || current?.id
-        return res.data.find((i) => i.id === wanted) || res.data[0] || current
-      })
-      setFeedState(res.isMock ? 'demo' : 'api')
+      if (res.data) setIncidents(res.data)
     })
-    return () => { live = false }
-  }, [incidentId])
-
-  // Reload the whole reconstruction whenever the selected incident changes.
-  useEffect(() => {
-    const id = selectedIncident?.id
-    if (!id) return
-    let live = true
-    Promise.all([fetchEvidence(id), fetchSourceGraph(id)]).then(([ev, graph]) => {
-      if (!live) return
-      setEvidence(ev)
-      setSourceGraph(graph.data)
-      if (ev.isMock) setFeedState('demo')
-      const nodes = toTimelineNodes(ev.timeline)
-      if (nodes.length) {
-        const first = nodes[0]
-        setActiveTimelineId(first.id)
-        setCurrentTimecode(first.timestamp && first.timestamp.length > 5 ? first.timestamp : `${first.time}:00`)
-      }
-    })
-    return () => { live = false }
-  }, [selectedIncident?.id])
-
-  const timelineNodes = useMemo(() => {
-    const fromApi = toTimelineNodes(evidence?.timeline)
-    return fromApi.length ? fromApi : TIMELINE_EVENTS
-  }, [evidence])
-
-  const metrics = evidence?.metrics || {}
-  const density = metrics.density ?? selectedIncident.density
-  const confidence = metrics.confidence ?? selectedIncident.confidence
-
-  const evidenceSources = useMemo(
-    () => (sourceGraph?.nodes || []).filter((node) => node.type !== 'incident'),
-    [sourceGraph]
-  )
-
-  const cameras = useMemo(() => {
-    const labels = evidence?.cameras || []
-    return CAMERAS_CONFIG.map((cam, index) => ({
-      ...cam,
-      label: labels[index] || cam.label,
-      // Real HTTP URL served by FastAPI's /videos static mount (never a fake path).
-      streamUrl: mediaUrl(cam.streamUrl),
-      metrics: {
-        density: density == null ? cam.metrics.density : `${density}%`,
-        velocity: metrics.velocity == null ? cam.metrics.velocity : `${metrics.velocity} m/s`,
-        count: cam.metrics.count
-      }
-    }))
-  }, [evidence, density, metrics.velocity])
+  }, [])
 
   const togglePlay = () => {
     if (!videoRef.current) return
@@ -246,6 +152,7 @@ export function EvidenceReconstructionPage({ onNavigate, incidentId }) {
         <div>
           <span className="ev-kicker">SURAKSHA · EVIDENCE HUB</span>
           <h1 className="ev-title">
+            <span className="ev-chip">Real-time</span>
             Evidence <b>reconstruction</b>
           </h1>
           <p className="ev-sub">
@@ -264,7 +171,7 @@ export function EvidenceReconstructionPage({ onNavigate, incidentId }) {
         incidents={incidents}
         selectedIncident={selectedIncident}
         onSelectIncident={setSelectedIncident}
-        timeRange={timelineNodes.length ? `${timelineNodes[0].time} — ${timelineNodes[timelineNodes.length - 1].time}` : '18:00 — 18:30'}
+        timeRange="18:00 — 18:30"
       />
 
       {/* HERO + STAT TILES */}
@@ -291,49 +198,13 @@ export function EvidenceReconstructionPage({ onNavigate, incidentId }) {
                 <span>ADVISORIES</span>
               </button>
             </div>
-
-            <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase' }}>
-                Verified Confidence
-              </span>
-              <div className="p4-stat-number" style={{ marginTop: 2 }}>
-                {Math.round((confidence || 0) * 100)}%
-              </div>
-              <span style={{ fontSize: 11, color: '#047d53', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                <CheckCircle2 size={13} />
-                Multi-Source Agreement High
-              </span>
-            </div>
           </div>
         </section>
 
-          {/* Evidence Breakdown Card */}
-          <div className="p4-panel-box">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <h3 className="p4-box-title">Evidence Breakdown</h3>
-              <span style={{ fontSize: 10, color: 'var(--ink-muted)', fontWeight: 700 }}>RELIABILITY (BACKEND SOURCES)</span>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {evidenceSources.map((src) => (
-                <div className="p4-source-item" key={src.id}>
-                  <div className="p4-source-left">
-                    <span className="p4-source-circle" style={{ background: SOURCE_COLOR[src.type] || SOURCE_COLOR.other }} />
-                    <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{src.label}</span>
-                  </div>
-                  <span style={{ color: (src.credibility ?? 0) >= 0.7 ? '#116b4b' : '#795100', fontWeight: 800 }}>
-                    {src.credibility == null ? '—' : `${Math.round(src.credibility * 100)}%`}
-                  </span>
-                </div>
-              ))}
-              {!evidenceSources.length && (
-                <span style={{ fontSize: 11, color: 'var(--ink-muted)' }}>
-                  No source records attributed to {selectedIncident.id} yet.
-                </span>
-              )}
-
-            </div>
-          </div>
+        <div className="ev-tile">
+          <div className="ev-tile-top"><span>Crowd density</span><span className="ev-tile-arrow"><ArrowUpRight size={16} /></span></div>
+          <div className="ev-tile-val">{density}<small>people</small></div>
+          <span className="ev-dots" />
         </div>
         <div className="ev-tile">
           <div className="ev-tile-top"><span>Linked sources</span><span className="ev-tile-arrow"><ArrowUpRight size={16} /></span></div>
@@ -567,45 +438,13 @@ export function EvidenceReconstructionPage({ onNavigate, incidentId }) {
           </div>
         </div>
 
-      {/* BOTTOM STRIP: Horizontal Forensic Timeline Scrubber */}
-      <div className="p4-bottom-timeline">
-        <div className="p4-timeline-left-stat">
-          <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            Forensic Timeline
-          </span>
-          <div style={{ fontSize: 19, fontWeight: 800, color: 'var(--ink)', fontFamily: 'var(--font-title)' }}>
-            {currentTimecode.slice(0, 5)} IST
-          </div>
-          <span style={{ fontSize: 10, color: 'var(--lime-deep)', fontWeight: 700 }}>
-            Window: {timelineNodes.length ? `${timelineNodes[0].time} — ${timelineNodes[timelineNodes.length - 1].time}` : '18:00 — 18:30'}
-          </span>
+        <div className="ev-tl-foot">
+          <Clock size={18} />
+          <b>Left: {minsLeft} min</b>
+          <span>in observation window</span>
         </div>
       </section>
 
-        <div className="p4-scrub-track">
-          <div className="p4-track-line" />
-
-          {timelineNodes.map((evt) => {
-            const isActive = activeTimelineId === evt.id
-
-            return (
-              <div
-                key={evt.id}
-                className={`p4-track-node ${isActive ? 'active' : ''}`}
-                onClick={() => handleTimelineClick(evt)}
-                title={`${evt.time} - ${evt.event}`}
-              >
-                <span className="p4-track-node-time">{evt.time}</span>
-                <span className="p4-track-node-label">
-                  {evt.event.length > 14 ? `${evt.event.slice(0, 13)}…` : evt.event}
-                </span>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Forensic Inspection Modal Drawer */}
       {drawerItem && (
         <EvidenceDrawer
           item={drawerItem}
