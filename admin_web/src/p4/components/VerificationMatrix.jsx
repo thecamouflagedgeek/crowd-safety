@@ -18,6 +18,23 @@ import {
 import { SEEDED_CLAIMS } from '../services/mockData'
 import { validateClaimAction } from '../services/api'
 
+const API_BASE = (import.meta.env?.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/$/, '')
+
+// Only these three videos are ever shown on the Verification page.
+const VIDEO_CROWD = `${API_BASE}/videos/admin_crowd.mp4`       // Heavy crowd congestion
+const VIDEO_BLOCKED = `${API_BASE}/videos/admin_blocked.mp4`   // Gate 3 is blocked
+const VIDEO_STAMPEDE = `${API_BASE}/videos/admin_stampede.mp4` // Stampede
+const CLAIM_VIDEOS_BY_ORDER = [VIDEO_CROWD, VIDEO_BLOCKED, VIDEO_STAMPEDE]
+
+// Picks the video from the claim text first, then falls back to claim order (1, 2, 3).
+const getClaimVideo = (claim, index) => {
+  const text = (claim?.claim || '').toLowerCase()
+  if (text.includes('stampede')) return VIDEO_STAMPEDE
+  if (text.includes('block')) return VIDEO_BLOCKED
+  if (text.includes('crowd') || text.includes('congest')) return VIDEO_CROWD
+  return CLAIM_VIDEOS_BY_ORDER[index] || null
+}
+
 export function VerificationMatrix({
   claims = SEEDED_CLAIMS,
   onNavigateAdvisory,
@@ -34,6 +51,8 @@ export function VerificationMatrix({
 
   const currentClaim = localClaims.find((c) => c.id === activeClaimId) || localClaims[0]
   const media = currentClaim.mediaEvidence || {}
+  const currentClaimIndex = Math.max(0, localClaims.findIndex((c) => c.id === currentClaim.id))
+  const videoSrc = getClaimVideo(currentClaim, currentClaimIndex)
 
   const handleValidate = async (claim) => {
     setActionFeedback({ type: 'loading', message: `Submitting authority validation for ${claim.id}...` })
@@ -151,6 +170,7 @@ export function VerificationMatrix({
               onClick={() => {
                 setActiveClaimId(c.id)
                 setActionFeedback(null)
+                setIsPlaying(true)
               }}
             >
               <span style={{
@@ -365,14 +385,21 @@ export function VerificationMatrix({
                 </div>
 
                 <div className="p4-video-player-wrap">
-                  <video
-                    ref={videoRef}
-                    src={media.cctv?.streamUrl || '/videos/camera_01.mp4'}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                  />
+                  {videoSrc ? (
+                    <video
+                      key={videoSrc}
+                      ref={videoRef}
+                      src={videoSrc}
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                    />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: '#94a3b8', fontSize: 12 }}>
+                      No CCTV footage linked to this claim
+                    </div>
+                  )}
                   {/* Real-time CV Forensic Overlay Banner */}
                   <div style={{
                     position: 'absolute',
@@ -409,6 +436,24 @@ export function VerificationMatrix({
                   <span style={{ color: '#94a3b8', fontSize: 10 }}>
                     Optical Flow Check: 0 falls, normal upright motion
                   </span>
+                </div>
+
+                {/* Resolved backend video URL */}
+                <div style={{
+                  background: '#18253a',
+                  padding: '0 14px 10px',
+                  fontSize: 10,
+                  fontFamily: 'var(--font-mono)',
+                  color: '#94a3b8',
+                  wordBreak: 'break-all'
+                }}>
+                  {videoSrc ? (
+                    <a href={videoSrc} target="_blank" rel="noreferrer" style={{ color: 'var(--lime)' }}>
+                      {videoSrc}
+                    </a>
+                  ) : (
+                    <span>No video URL</span>
+                  )}
                 </div>
               </div>
 

@@ -108,6 +108,53 @@ const IncidentMarker = memo(function IncidentMarker({ item, selected, onSelect }
   return <Marker position={[item.latitude, item.longitude]} icon={icon} eventHandlers={{ click: () => onSelect(item) }}/>
 })
 
+// Load every local incident image; Vite bundles them and returns their URLs
+const assetModules = import.meta.glob('./assets/*.jpg', { eager: true, import: 'default' })
+
+// Group by incident type: crowd_anomaly, crowd_anomaly_2 ... -> imagesByType.crowd_anomaly = [...]
+const imagesByType = {}
+Object.entries(assetModules).forEach(([path, url]) => {
+  const m = path.match(/\/(crowd_anomaly|public_gathering|traffic_accident|unattended_baggage)(?:_\d+)?\.jpg$/)
+  if (m) (imagesByType[m[1]] ||= []).push(url)
+})
+
+// Stable pseudo-random number from the incident id
+function hashString(str) {
+  let h = 2166136261
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return h >>> 0
+}
+
+function imagesForIncident(item) {
+  const key = (item.type || '').toLowerCase().trim().replace(/\s+/g, '_')
+  return imagesByType[key] || imagesByType.public_gathering || []
+}
+
+const mediaWrap = { position: 'relative', overflow: 'hidden', isolation: 'isolate' }
+
+function IncidentImage({ item }) {
+  const list = imagesForIncident(item)
+  const start = hashString(String(item.id || item.type || '')) % (list.length || 1)
+  const [skipped, setSkipped] = useState(0)
+
+  useEffect(() => { setSkipped(0) }, [item.id])
+
+  // No matching images, or every one failed: show the original gradient + icon
+  if (!list.length || skipped >= list.length) return null
+
+  return (
+    <img
+      src={list[(start + skipped) % list.length]}
+      alt=""
+      onError={() => setSkipped((n) => n + 1)}
+      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: -1, filter: 'brightness(.8)' }}
+    />
+  )
+}
+
 function Severity({ level }) {
   return <span className={`severity severity-${(level || 'LOW').toLowerCase()}`}>{level || 'UNKNOWN'}</span>
 }
@@ -468,8 +515,9 @@ export function App() {
                         className={`incident-row ${isSelected ? 'chosen' : ''}`}
                         onClick={() => chooseIncident(item)}
                       >
-                        <div className={`incident-thumb thumb-${(item.severity || 'low').toLowerCase()}`}>
-                          <Camera size={16} />
+                        <div className={`incident-thumb thumb-${(item.severity || 'low').toLowerCase()}`} style={mediaWrap}>
+  <IncidentImage item={item} width={200} />
+  <Camera size={16} />
                           <span>{item.id.slice(-2)}</span>
                         </div>
 
@@ -510,8 +558,9 @@ export function App() {
                 {selected ? (
                   <>
                     {/* CRT Camera Visual Preview */}
-                    <div className="camera-preview">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: 0.85 }}>
+                    <div className="camera-preview" style={mediaWrap}>
+  <IncidentImage item={selected} width={800} />
+  <div style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: 0.85 }}>
                         <Users size={32} />
                         <span style={{ fontSize: 13, letterSpacing: 2 }}>········</span>
                       </div>

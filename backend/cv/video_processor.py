@@ -28,9 +28,15 @@ import numpy as np
 import store
 from cv.detector import Detector
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-VIDEO_DIR = BASE_DIR / "videos"
+
+BACKEND_DIR = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = BACKEND_DIR.parent
+
+VIDEO_DIR = PROJECT_ROOT / "videos"
 VIDEO_DIR.mkdir(parents=True, exist_ok=True)
+
+BASE_DIR = BACKEND_DIR
+ASSET_DIR = BASE_DIR / "assets"
 
 PROCESS_FPS = float(os.getenv("CV_PROCESS_FPS", "10"))
 LOOP_VIDEO = os.getenv("CV_LOOP_VIDEO", "1") == "1"
