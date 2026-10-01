@@ -9,6 +9,8 @@ import {
   Newspaper,
   Radio,
   Users,
+  Camera,
+  Share2,
   Play,
   Pause,
   RotateCcw,
@@ -184,21 +186,23 @@ export function VerificationMatrix({
   const renderAgreeBadge = (val) => {
     if (val === true) {
       return (
-        <span className="p4-agree-badge yes" title="Supported by this source">
-          <Check size={14} />
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#aee6ca', color: '#116b4b', padding: '3px 10px', borderRadius: 999, fontSize: 10, fontWeight: 800, letterSpacing: '0.04em' }} title="Supported by this source">
+          <Check size={12} />
+          <span>AGREES</span>
         </span>
       )
     }
     if (val === false) {
       return (
-        <span className="p4-agree-badge no" title="Contradicted or unsupported">
-          <X size={14} />
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#ffd7da', color: '#99212e', padding: '3px 10px', borderRadius: 999, fontSize: 10, fontWeight: 800, letterSpacing: '0.04em' }} title="Contradicted or unsupported">
+          <X size={12} />
+          <span>CONFLICT</span>
         </span>
       )
     }
     return (
-      <span className="p4-agree-badge partial" title="Ambiguous / partial mention">
-        ~
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#fef9c3', color: '#854d0e', padding: '3px 10px', borderRadius: 999, fontSize: 10, fontWeight: 800, letterSpacing: '0.04em' }} title="Ambiguous / corroborating">
+        <span>REPORTED</span>
       </span>
     )
   }
@@ -210,43 +214,51 @@ export function VerificationMatrix({
         display: 'flex',
         alignItems: 'center',
         gap: 10,
-        background: 'var(--surface)',
-        padding: '12px 18px',
-        borderRadius: 'var(--panel-radius)',
+        background: 'linear-gradient(145deg, #ffffff, #fcfdfa)',
+        padding: '14px 20px',
+        borderRadius: 24,
         border: '1px solid var(--border)',
         boxShadow: 'var(--card-shadow)',
         flexWrap: 'wrap'
       }}>
-        <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--ink-muted)', letterSpacing: '0.08em' }}>
+        <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--ink-muted)', letterSpacing: '0.1em' }}>
           SELECT CLAIM TO AUDIT:
         </span>
-        {localClaims.map((c) => {
-          const isSelected = c.id === currentClaim.id
-          const isVerified = c.status === 'VERIFIED'
-          const isRejected = c.status === 'REJECTED'
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          {localClaims.map((c) => {
+            const isSelected = c.id === currentClaim.id
+            const isVerified = c.status === 'VERIFIED'
+            const isRejected = c.status === 'REJECTED'
 
-          return (
-            <button
-              key={c.id}
-              className={isSelected ? 'p4-ink-btn' : 'p4-outline-btn'}
-              style={{ padding: '6px 14px', fontSize: 11 }}
-              onClick={() => {
-                setActiveClaimId(c.id)
-                setActionFeedback(null)
-                setIsPlaying(true)
-              }}
-            >
-              <span style={{
-                color: isVerified ? '#aee6ca' : isRejected ? '#fca5a5' : 'var(--lime)',
-                fontWeight: 800,
-                marginRight: 4
-              }}>
-                {isVerified ? '✓' : isRejected ? '✕' : '?'}
-              </span>
-              <span>{c.id}: "{c.claim.slice(0, 36)}…"</span>
-            </button>
-          )
-        })}
+            return (
+              <button
+                key={c.id}
+                className={isSelected ? 'p4-ink-btn' : 'p4-outline-btn'}
+                style={{
+                  borderRadius: 999,
+                  padding: '7px 16px',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  transition: 'all 0.15s ease'
+                }}
+                onClick={() => {
+                  setActiveClaimId(c.id)
+                  setActionFeedback(null)
+                  setIsPlaying(true)
+                }}
+              >
+                <span style={{
+                  color: isVerified ? '#aee6ca' : isRejected ? '#fca5a5' : 'var(--lime)',
+                  fontWeight: 800,
+                  marginRight: 6
+                }}>
+                  {isVerified ? '✓' : isRejected ? '✕' : '?'}
+                </span>
+                <span>{c.id}: "{c.claim.slice(0, 36)}…"</span>
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Main Verification Grid: Two Columns (Left: Claim & Source Matrix, Right: All Sources Media Dossier) */}
@@ -254,7 +266,7 @@ export function VerificationMatrix({
 
         {/* Left Column: Claim Statement & Evidence Agreement Matrix */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div className="p4-matrix-box">
+          <div className="p4-matrix-box" style={{ borderRadius: 28, padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span className="p4-badge-tag">CLAIM UNDER INSPECTION</span>
               <div style={{ display: 'flex', gap: 6 }}>
@@ -267,11 +279,11 @@ export function VerificationMatrix({
               </div>
             </div>
 
-            <blockquote className="p4-quote-line">
+            <blockquote className="p4-quote-line" style={{ fontSize: 19, lineHeight: 1.35, color: 'var(--ink)' }}>
               "{currentClaim.claim}"
             </blockquote>
 
-            <div style={{ fontSize: 11, color: 'var(--ink-secondary)', display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+            <div style={{ fontSize: 11.5, color: 'var(--ink-secondary)', display: 'flex', gap: 16, flexWrap: 'wrap', borderBottom: '1px solid var(--border-light)', paddingBottom: 14 }}>
               <span>Target Location: <b style={{ color: 'var(--ink)' }}>{currentClaim.location}</b></span>
               <span>Logged: <b style={{ color: 'var(--ink)' }}>{currentClaim.timestamp} IST</b></span>
               <span>Source: <b style={{ color: 'var(--ink)' }}>{currentClaim.submitted_by}</b></span>
@@ -279,46 +291,81 @@ export function VerificationMatrix({
 
             {/* Evidence Matrix Table */}
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                 <h4 style={{ margin: 0, fontSize: 12, fontWeight: 800, color: 'var(--ink)', letterSpacing: '0.04em' }}>
                   EVIDENCE SOURCE AGREEMENT MATRIX
                 </h4>
-                <span style={{ fontSize: 10, color: 'var(--ink-muted)' }}>Cross-referenced against 5 live feeds</span>
+                <span style={{ fontSize: 10, color: 'var(--ink-muted)', fontWeight: 600 }}>Cross-referenced against 5 live feeds</span>
               </div>
 
               <table className="p4-clean-table">
                 <thead>
                   <tr>
-                    <th style={{ width: 140 }}>SOURCE STREAM</th>
-                    <th style={{ width: 60, textAlign: 'center' }}>MATCH</th>
+                    <th style={{ width: 160 }}>SOURCE STREAM</th>
+                    <th style={{ width: 64, textAlign: 'center' }}>MATCH</th>
                     <th>FORENSIC CROSS-CHECK DETAIL</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
-                    <td><b>CCTV Optical Flow</b></td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--surface-soft)', border: '1px solid var(--border)', display: 'grid', placeItems: 'center', color: 'var(--ink)' }}>
+                          <Camera size={12} />
+                        </span>
+                        <b>CCTV Optical Flow</b>
+                      </div>
+                    </td>
                     <td style={{ textAlign: 'center' }}>{renderAgreeBadge(currentClaim.evidenceMatrix?.cctv?.verified)}</td>
-                    <td>{currentClaim.evidenceMatrix?.cctv?.label || 'Computer vision status'}</td>
+                    <td style={{ fontSize: 11.5, color: 'var(--ink-secondary)' }}>{currentClaim.evidenceMatrix?.cctv?.label || 'Computer vision status'}</td>
                   </tr>
                   <tr>
-                    <td><b>Citizen Reports</b></td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--surface-soft)', border: '1px solid var(--border)', display: 'grid', placeItems: 'center', color: 'var(--ink)' }}>
+                          <Users size={12} />
+                        </span>
+                        <b>Citizen Reports</b>
+                      </div>
+                    </td>
                     <td style={{ textAlign: 'center' }}>{renderAgreeBadge(currentClaim.evidenceMatrix?.citizen?.verified)}</td>
-                    <td>{currentClaim.evidenceMatrix?.citizen?.label || 'Citizen field reports'}</td>
+                    <td style={{ fontSize: 11.5, color: 'var(--ink-secondary)' }}>{currentClaim.evidenceMatrix?.citizen?.label || 'Citizen field reports'}</td>
                   </tr>
                   <tr>
-                    <td><b>Ground Marshals</b></td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--surface-soft)', border: '1px solid var(--border)', display: 'grid', placeItems: 'center', color: 'var(--ink)' }}>
+                          <Radio size={12} />
+                        </span>
+                        <b>Ground Marshals</b>
+                      </div>
+                    </td>
                     <td style={{ textAlign: 'center' }}>{renderAgreeBadge(currentClaim.evidenceMatrix?.official?.verified)}</td>
-                    <td>{currentClaim.evidenceMatrix?.official?.label || 'Event authority radio logs'}</td>
+                    <td style={{ fontSize: 11.5, color: 'var(--ink-secondary)' }}>{currentClaim.evidenceMatrix?.official?.label || 'Event authority radio logs'}</td>
                   </tr>
                   <tr>
-                    <td><b>News Outlets</b></td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--surface-soft)', border: '1px solid var(--border)', display: 'grid', placeItems: 'center', color: 'var(--ink)' }}>
+                          <Newspaper size={12} />
+                        </span>
+                        <b>News Outlets</b>
+                      </div>
+                    </td>
                     <td style={{ textAlign: 'center' }}>{renderAgreeBadge(currentClaim.evidenceMatrix?.news?.verified)}</td>
-                    <td>{currentClaim.evidenceMatrix?.news?.label || 'Public broadcast wires'}</td>
+                    <td style={{ fontSize: 11.5, color: 'var(--ink-secondary)' }}>{currentClaim.evidenceMatrix?.news?.label || 'Public broadcast wires'}</td>
                   </tr>
                   <tr>
-                    <td><b>Social Chatter</b></td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--surface-soft)', border: '1px solid var(--border)', display: 'grid', placeItems: 'center', color: 'var(--ink)' }}>
+                          <Share2 size={12} />
+                        </span>
+                        <b>Social Chatter</b>
+                      </div>
+                    </td>
                     <td style={{ textAlign: 'center' }}>{renderAgreeBadge(currentClaim.evidenceMatrix?.social?.verified)}</td>
-                    <td>{currentClaim.evidenceMatrix?.social?.label || 'Social media keyword stream'}</td>
+                    <td style={{ fontSize: 11.5, color: 'var(--ink-secondary)' }}>{currentClaim.evidenceMatrix?.social?.label || 'Social media keyword stream'}</td>
                   </tr>
                 </tbody>
               </table>
@@ -327,7 +374,7 @@ export function VerificationMatrix({
             {/* Backend verification engine result (source of truth) */}
             <button
               className="p4-outline-btn"
-              style={{ justifyContent: 'center', padding: '11px', width: '100%' }}
+              style={{ justifyContent: 'center', padding: '12px', width: '100%', borderRadius: 999, fontSize: 11, fontWeight: 800, letterSpacing: '0.04em' }}
               onClick={handleRunVerification}
               disabled={isVerifying}
             >
@@ -339,8 +386,8 @@ export function VerificationMatrix({
               <div style={{
                 background: 'var(--surface-soft)',
                 border: '1px solid var(--border)',
-                borderRadius: 14,
-                padding: '12px 16px',
+                borderRadius: 18,
+                padding: '14px 18px',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 8
@@ -380,8 +427,8 @@ export function VerificationMatrix({
               <div style={{
                 background: actionFeedback.type === 'success' ? '#eff6ce' : actionFeedback.type === 'reject' ? '#ffd7da' : 'var(--surface-soft)',
                 border: `1px solid ${actionFeedback.type === 'success' ? '#c3db29' : actionFeedback.type === 'reject' ? '#fecaca' : 'var(--border)'}`,
-                borderRadius: 14,
-                padding: '12px 16px',
+                borderRadius: 18,
+                padding: '14px 18px',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 6
@@ -404,7 +451,7 @@ export function VerificationMatrix({
                 {actionFeedback.type === 'success' && onNavigateAdvisory && (
                   <button
                     className="p4-ink-btn"
-                    style={{ alignSelf: 'flex-start', marginTop: 4, padding: '6px 12px', fontSize: 11 }}
+                    style={{ alignSelf: 'flex-start', marginTop: 4, padding: '7px 16px', fontSize: 11, borderRadius: 999 }}
                     onClick={() => onNavigateAdvisory(actionFeedback.claim)}
                   >
                     <span>PROCEED TO PUBLISH ADVISORY</span>
@@ -415,10 +462,10 @@ export function VerificationMatrix({
             )}
 
             {/* Authority Decision Action Buttons */}
-            <div style={{ display: 'flex', gap: 10 }}>
+            <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
               <button
                 className="p4-ink-btn"
-                style={{ flex: 1, justifyContent: 'center', padding: '12px' }}
+                style={{ flex: 1, justifyContent: 'center', padding: '13px', borderRadius: 999, fontSize: 12 }}
                 onClick={() => handleValidate(currentClaim)}
                 disabled={currentClaim.status === 'VERIFIED'}
               >
@@ -427,7 +474,7 @@ export function VerificationMatrix({
               </button>
               <button
                 className="p4-outline-btn"
-                style={{ flex: 1, justifyContent: 'center', padding: '12px', borderColor: '#fca5a5', color: '#99212e' }}
+                style={{ flex: 1, justifyContent: 'center', padding: '13px', borderRadius: 999, fontSize: 12, borderColor: '#fca5a5', color: '#99212e' }}
                 onClick={() => handleReject(currentClaim)}
                 disabled={currentClaim.status === 'REJECTED'}
               >
@@ -439,23 +486,24 @@ export function VerificationMatrix({
         </div>
 
         {/* Right Column: ALL SOURCES OF MEDIA PRESENTED TO ADMIN */}
-        <div className="p4-media-dossier">
+        <div className="p4-media-dossier" style={{ borderRadius: 28, padding: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <span className="p4-badge-tag">EXECUTIVE MEDIA DOSSIER</span>
-              <h3 className="p4-box-title" style={{ marginTop: 4 }}>
+              <h3 className="p4-box-title" style={{ marginTop: 6, fontSize: 18, fontWeight: 700 }}>
                 Multi-Source Evidence Inspection
               </h3>
             </div>
-            <span style={{ fontSize: 10, color: 'var(--ink-muted)', fontWeight: 700 }}>
+            <span style={{ fontSize: 10, color: 'var(--ink-muted)', fontWeight: 800, letterSpacing: '0.06em' }}>
               SYNCED TO CLAIM: {currentClaim.id}
             </span>
           </div>
 
           {/* Media Navigation Tabs */}
-          <div className="p4-media-tabs">
+          <div className="p4-media-tabs" style={{ gap: 6 }}>
             <button
               className={`p4-media-tab-btn ${activeMediaTab === 'cctv' ? 'active' : ''}`}
+              style={{ borderRadius: 999, padding: '7px 15px' }}
               onClick={() => setActiveMediaTab('cctv')}
             >
               <Video size={13} />
@@ -463,6 +511,7 @@ export function VerificationMatrix({
             </button>
             <button
               className={`p4-media-tab-btn ${activeMediaTab === 'news' ? 'active' : ''}`}
+              style={{ borderRadius: 999, padding: '7px 15px' }}
               onClick={() => setActiveMediaTab('news')}
             >
               <Newspaper size={13} />
@@ -470,6 +519,7 @@ export function VerificationMatrix({
             </button>
             <button
               className={`p4-media-tab-btn ${activeMediaTab === 'radio' ? 'active' : ''}`}
+              style={{ borderRadius: 999, padding: '7px 15px' }}
               onClick={() => setActiveMediaTab('radio')}
             >
               <Radio size={13} />
@@ -477,6 +527,7 @@ export function VerificationMatrix({
             </button>
             <button
               className={`p4-media-tab-btn ${activeMediaTab === 'citizen' ? 'active' : ''}`}
+              style={{ borderRadius: 999, padding: '7px 15px' }}
               onClick={() => setActiveMediaTab('citizen')}
             >
               <Users size={13} />

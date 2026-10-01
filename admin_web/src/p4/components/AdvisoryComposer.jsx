@@ -167,8 +167,8 @@ export function AdvisoryComposer({
         </div>
       )}
 
-      {/* 2-Column: Composer (Left) & Mobile Citizen Preview (Right) */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: 20 }}>
+      {/* 2-Column: Composer (Left) & Citizen Preview (Right) */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: 20, alignItems: 'start' }}>
         {/* Left: Composer */}
         <div className="p4-panel-box" style={CARD}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
@@ -294,6 +294,122 @@ export function AdvisoryComposer({
               )}
             </button>
           </form>
+        </div>
+
+        {/* Right: Live Citizen Preview */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 16,
+          position: 'sticky',
+          top: 90
+        }}>
+          {/* Preview label */}
+          <div style={{
+            background: 'linear-gradient(145deg, #ffffff, #fcfdfa)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--panel-radius)',
+            padding: '20px',
+            boxShadow: 'var(--card-shadow)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 14
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <span className="p4-badge-tag" style={{ marginBottom: 6 }}>CITIZEN BROADCAST PREVIEW</span>
+                <h3 className="p4-box-title" style={{ marginTop: 4, fontSize: 14 }}>Live preview</h3>
+              </div>
+              <Users size={18} style={{ color: 'var(--ink-muted)' }} />
+            </div>
+
+            {/* Phone mockup preview card */}
+            <div style={{
+              background: severity === 'CRITICAL' || severity === 'HIGH' ? '#fff1f2' : severity === 'MEDIUM' ? '#fffbeb' : '#f0fdf4',
+              border: `1.5px solid ${severity === 'CRITICAL' || severity === 'HIGH' ? '#fecaca' : severity === 'MEDIUM' ? '#fde68a' : '#bbf7d0'}`,
+              borderLeft: `4px solid ${severity === 'CRITICAL' || severity === 'HIGH' ? '#ef4444' : severity === 'MEDIUM' ? '#f59e0b' : '#22c55e'}`,
+              borderRadius: 16,
+              padding: '16px 18px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10
+            }}>
+              {/* Alert header */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{
+                  fontSize: 9,
+                  fontWeight: 800,
+                  letterSpacing: '0.08em',
+                  color: severity === 'CRITICAL' || severity === 'HIGH' ? '#991b1b' : severity === 'MEDIUM' ? '#92400e' : '#166534',
+                  textTransform: 'uppercase',
+                  background: severity === 'CRITICAL' || severity === 'HIGH' ? '#fecaca' : severity === 'MEDIUM' ? '#fde68a' : '#bbf7d0',
+                  padding: '3px 8px',
+                  borderRadius: 8
+                }}>
+                  ⚠ {severity} SEVERITY
+                </span>
+                <span style={{ fontSize: 9, color: 'var(--ink-muted)', fontWeight: 600, marginLeft: 'auto' }}>
+                  Vigil ALERT
+                </span>
+              </div>
+
+              {/* Incident + Location */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--ink-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                  {selectedIncident} · {location}
+                </span>
+              </div>
+
+              {/* Message */}
+              <p style={{
+                margin: 0,
+                fontSize: 13,
+                fontWeight: 500,
+                color: 'var(--ink)',
+                lineHeight: 1.5,
+                fontFamily: 'var(--font-body)'
+              }}>
+                {message || 'Advisory message will appear here...'}
+              </p>
+
+              {/* Footer */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingTop: 4, borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                <span style={{ fontSize: 10, color: 'var(--ink-muted)', fontWeight: 600 }}>
+                  Public Safety Command Authority · Just now
+                </span>
+              </div>
+            </div>
+
+            <p style={{ margin: 0, fontSize: 11, color: 'var(--ink-muted)', lineHeight: 1.4 }}>
+              This preview reflects exactly what citizens will receive on the Vigil citizen app and digital signage boards.
+            </p>
+          </div>
+
+          {/* Reach estimate */}
+          <div style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 18,
+            padding: '14px 18px',
+            boxShadow: 'var(--card-shadow)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 10
+          }}>
+            <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--ink-muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              Broadcast reach
+            </span>
+            {[
+              { label: 'Citizen app users (nearby)', value: '4,200+' },
+              { label: 'Digital signage boards', value: '12 active' },
+              { label: 'Emergency SMS relay', value: 'Enabled' }
+            ].map((item) => (
+              <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
+                <span style={{ color: 'var(--ink-secondary)' }}>{item.label}</span>
+                <b style={{ color: 'var(--ink)', fontWeight: 700 }}>{item.value}</b>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 

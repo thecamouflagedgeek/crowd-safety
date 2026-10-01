@@ -150,7 +150,7 @@ export function EvidenceReconstructionPage({ onNavigate }) {
       {/* HEADER */}
       <div className="ev-head">
         <div>
-          <span className="ev-kicker">SURAKSHA · EVIDENCE HUB</span>
+          <span className="ev-kicker">Vigil · EVIDENCE HUB</span>
           <h1 className="ev-title">
             <span className="ev-chip">Real-time</span>
             Evidence <b>reconstruction</b>

@@ -4,6 +4,7 @@ import L from 'leaflet'
 import {
   Activity,
   AlertTriangle,
+  ArrowRight,
   Bell,
   Camera,
   ChevronDown,
@@ -23,12 +24,33 @@ import {
 import 'leaflet/dist/leaflet.css'
 import './App.css'
 import './p4/styles/p4.css'
+import './p4/styles/evidence-airly.css'
 import { HeatmapLayer } from './HeatmapLayer'
 import { EvidenceReconstructionPage } from './p4/pages/EvidenceReconstructionPage'
 import { InformationPropagationPage } from './p4/pages/InformationPropagationPage'
 import { VerificationPage } from './p4/pages/VerificationPage'
 import { AdvisoriesPage } from './p4/pages/AdvisoriesPage'
 import { API_BASE } from './p4/services/api'
+
+function Contours() {
+  return (
+    <svg className="ev-contours" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      {Array.from({ length: 18 }).map((_, i) => (
+        <ellipse
+          key={i}
+          cx={210 + Math.sin(i) * 14}
+          cy={150 + Math.cos(i * 1.3) * 10}
+          rx={26 + i * 17}
+          ry={16 + i * 11}
+          transform={`rotate(${-18 + i * 2.5} 210 150)`}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1"
+        />
+      ))}
+    </svg>
+  )
+}
 
 const demoIncidents = [
   { id: 'INC001', type: 'Crowd Anomaly', location: 'Gate 3, Mumbai', latitude: 19.076, longitude: 72.8777, severity: 'HIGH', confidence: .91, density: 86, velocity: .24, status: 'ACTIVE', timestamp: '18:21', description: 'Abnormally high crowd density detected with reduced movement velocity.', camera: 'Camera 03 · Gate 3' },
@@ -308,7 +330,7 @@ export function App() {
               <span>✦</span>
             </div>
             <div>
-              <b>SURAKSHA</b>
+              <b>Vigil</b>
               <small>Public Safety Command Center</small>
             </div>
           </div>
@@ -354,7 +376,7 @@ export function App() {
           </nav>
           <div className="nav-foot">
             <Shield size={16} style={{ color: 'var(--lime-deep)' }} />
-            <span>Suraksha Command v2.4</span>
+            <span>Vigil Command v2.4</span>
           </div>
         </aside>
 
@@ -368,47 +390,134 @@ export function App() {
         ) : route === '/advisories' ? (
           <AdvisoriesPage onNavigate={navigate} prefillMessage={navState?.prefillMessage} />
         ) : (
-          /* Incident Dashboard with strong personality and clean editorial hierarchy */
-          <main className="dashboard">
-            {/* 4 Distinctive Suraksha Metric Cards with colored icon circles */}
-            <section className="metrics-grid">
-              <div className="metric-card blue">
-                <div className="metric-icon">
-                  <Layers3 size={20} />
+          /* Incident Dashboard — Suraksha editorial identity (Compact above-the-fold layout) */
+          <main className="dashboard ev-page" style={{ padding: '12px 20px 16px', gap: 10, minWidth: 0 }}>
+            {/* COMPACT EDITORIAL HEADER */}
+            <div className="ev-head" style={{ alignItems: 'center' }}>
+              <div>
+                <span className="ev-kicker" style={{ fontSize: 9, padding: '3px 10px' }}>SURAKSHA · LIVE COMMAND</span>
+                <h1 className="ev-title" style={{ margin: '2px 0 0', fontSize: 'clamp(20px, 2.2vw, 26px)' }}>
+                  <span className="ev-chip" style={{ fontSize: '0.45em', padding: '2px 10px', marginRight: 8 }}>Live radar</span>
+                  Incident <b>command</b>
+                </h1>
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                <button className="ev-btn ink" style={{ padding: '7px 14px', fontSize: 11 }} onClick={handleRecenter}>
+                  <RotateCcw size={12} />
+                  <span>RECENTER MAP</span>
+                </button>
+                <button className="ev-btn light" style={{ padding: '7px 14px', fontSize: 11 }} onClick={() => navigate('/evidence')}>
+                  <Video size={12} />
+                  <span>EVIDENCE HUB</span>
+                </button>
+              </div>
+            </div>
+
+            {/* COMPACT METRIC CARDS — Low-profile horizontal pills so map appears immediately */}
+            <section style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+              <div style={{
+                background: 'linear-gradient(145deg, #ffffff, #fcfdfa)',
+                border: '1px solid var(--border)',
+                borderRadius: 18,
+                padding: '10px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                boxShadow: '0 2px 8px rgba(20, 32, 52, 0.04)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                  <span style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--surface-soft)', border: '1px solid var(--border)', display: 'grid', placeItems: 'center', color: 'var(--ink)' }}>
+                    <Layers3 size={15} />
+                  </span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Total monitored
+                  </span>
                 </div>
-                <div className="metric-copy">
-                  <span>TOTAL MONITORED</span>
-                  <b>{source === 'loading' ? '—' : counts.total}</b>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                  <b style={{ fontSize: 22, fontWeight: 800, color: 'var(--ink)', fontFamily: 'var(--font-title)' }}>
+                    {source === 'loading' ? '—' : counts.total}
+                  </b>
+                  <small style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>zones</small>
                 </div>
               </div>
 
-              <div className="metric-card red">
-                <div className="metric-icon">
-                  <Siren size={20} />
+              <div style={{
+                background: 'linear-gradient(165deg, #243547, #152234)',
+                color: '#ffffff',
+                border: '1px solid #1e2c3d',
+                borderRadius: 18,
+                padding: '10px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                boxShadow: '0 4px 12px rgba(20, 32, 52, 0.12)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                  <span style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'grid', placeItems: 'center', color: '#fca5a5' }}>
+                    <Siren size={15} />
+                  </span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    High risk alerts
+                  </span>
                 </div>
-                <div className="metric-copy">
-                  <span>HIGH RISK</span>
-                  <b>{source === 'loading' ? '—' : (counts.HIGH || 0) + (counts.CRITICAL || 0)}</b>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                  <b style={{ fontSize: 22, fontWeight: 800, color: '#ffffff', fontFamily: 'var(--font-title)' }}>
+                    {(counts.HIGH || 0) + (counts.CRITICAL || 0)}
+                  </b>
+                  <small style={{ fontSize: 10, color: '#fca5a5', fontWeight: 700, textTransform: 'uppercase' }}>critical</small>
                 </div>
               </div>
 
-              <div className="metric-card amber">
-                <div className="metric-icon">
-                  <AlertTriangle size={20} />
+              <div style={{
+                background: 'linear-gradient(145deg, #ffffff, #fcfdfa)',
+                border: '1px solid var(--border)',
+                borderRadius: 18,
+                padding: '10px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                boxShadow: '0 2px 8px rgba(20, 32, 52, 0.04)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                  <span style={{ width: 32, height: 32, borderRadius: '50%', background: '#fef3c7', border: '1px solid #fde68a', display: 'grid', placeItems: 'center', color: '#d97706' }}>
+                    <AlertTriangle size={15} />
+                  </span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Medium alerts
+                  </span>
                 </div>
-                <div className="metric-copy">
-                  <span>MEDIUM RISK</span>
-                  <b>{source === 'loading' ? '—' : counts.MEDIUM || 0}</b>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                  <b style={{ fontSize: 22, fontWeight: 800, color: 'var(--ink)', fontFamily: 'var(--font-title)' }}>
+                    {counts.MEDIUM || 0}
+                  </b>
+                  <small style={{ fontSize: 10, color: '#d97706', fontWeight: 700, textTransform: 'uppercase' }}>active</small>
                 </div>
               </div>
 
-              <div className="metric-card green">
-                <div className="metric-icon">
-                  <Shield size={20} />
+              <div style={{
+                background: 'linear-gradient(145deg, #ffffff, #fcfdfa)',
+                border: '1px solid var(--border)',
+                borderRadius: 18,
+                padding: '10px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                boxShadow: '0 2px 8px rgba(20, 32, 52, 0.04)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                  <span style={{ width: 32, height: 32, borderRadius: '50%', background: '#eff6ce', border: '1px solid #d4e595', display: 'grid', placeItems: 'center', color: '#456000' }}>
+                    <Shield size={15} />
+                  </span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Routine / safe
+                  </span>
                 </div>
-                <div className="metric-copy">
-                  <span>LOW / ROUTINE</span>
-                  <b>{source === 'loading' ? '—' : counts.LOW || 0}</b>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                  <b style={{ fontSize: 22, fontWeight: 800, color: 'var(--ink)', fontFamily: 'var(--font-title)' }}>
+                    {counts.LOW || 0}
+                  </b>
+                  <small style={{ fontSize: 10, color: '#16a34a', fontWeight: 700, textTransform: 'uppercase' }}>normal</small>
                 </div>
               </div>
             </section>
@@ -488,7 +597,7 @@ export function App() {
                 </MapContainer>
               </div>
 
-              {/* Center Panel: Active Incidents List with Camera Thumb Tiles */}
+              {/* Center Panel: Active Incidents List */}
               <div className="panel" style={{ display: 'flex', flexDirection: 'column' }}>
                 <div className="section-heading">
                   <h2>ACTIVE INCIDENTS</h2>
@@ -542,7 +651,7 @@ export function App() {
                 </div>
               </div>
 
-              {/* Right Panel: Selected Incident Summary with Strong Editorial Hierarchy */}
+              {/* Right Panel: Selected Incident Inspection */}
               <div className="panel detail-panel">
                 <div className="detail-header">
                   <h2>INCIDENT INSPECTION</h2>
@@ -558,7 +667,7 @@ export function App() {
 
                 {selected ? (
                   <>
-                    {/* CRT Camera Visual Preview */}
+                    {/* Camera Preview */}
                     <div className="camera-preview" style={mediaWrap}>
   <IncidentImage item={selected} width={800} />
   <div style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: 0.85 }}>
@@ -574,7 +683,7 @@ export function App() {
                       </div>
                     </div>
 
-                    {/* Dominant Editorial Incident Hero */}
+                    {/* Incident Hero */}
                     <div className="detail-hero-box">
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <Severity level={selected.severity} />
@@ -594,7 +703,7 @@ export function App() {
                       </p>
                     </div>
 
-                    {/* Key Telemetry Summary Box */}
+                    {/* Key Telemetry */}
                     <div className="detail-key-metrics">
                       <div className="detail-metric-item">
                         <span>Crowd Density</span>
@@ -614,7 +723,7 @@ export function App() {
                       </div>
                     </div>
 
-                    {/* Characterful Suraksha Action Buttons */}
+                    {/* Quick Actions */}
                     <div className="quick-actions-box">
                       <button className="quick-action-btn primary" onClick={() => navigate('/evidence')}>
                         <Video size={16} />
@@ -633,7 +742,7 @@ export function App() {
                       </button>
                     </div>
 
-                    {/* Progressive Disclosure: Secondary Technical Metadata */}
+                    {/* Progressive Technical Metadata */}
                     <div className="tech-details-box">
                       <button
                         className="tech-details-toggle"

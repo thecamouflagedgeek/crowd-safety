@@ -288,37 +288,232 @@ body {
   min-width: 0;
 }
 
-/* METRICS STRIP — Distinctive Suraksha Cards with colored icon circles */
+/* EDITORIAL DASHBOARD PAGE HEADER — mirrors Evidence & Propagation pages */
+.dash-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 22px;
+  background: linear-gradient(145deg, #ffffff, #fcfdfa);
+  border: 1px solid var(--border);
+  border-radius: var(--panel-radius);
+  box-shadow: var(--card-shadow);
+}
+
+.dash-badge-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--lime-deep);
+  background: #eff6ce;
+  padding: 4px 10px;
+  border-radius: 12px;
+  border: 1px solid #d4e595;
+  width: fit-content;
+}
+
+.dash-page-title {
+  margin: 0;
+  font-family: var(--font-title);
+  font-size: clamp(20px, 2.5vw, 30px);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+  line-height: 1.1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.dash-title-chip {
+  display: inline-block;
+  background: #ffffff;
+  border-radius: 999px;
+  padding: 2px 14px;
+  font-size: 0.45em;
+  font-weight: 600;
+  margin-right: 10px;
+  vertical-align: middle;
+  position: relative;
+  top: -0.1em;
+  box-shadow: 0 2px 8px rgba(20, 32, 52, 0.08);
+  border: 1px solid var(--border);
+  color: var(--ink);
+}
+
+.dash-page-title b {
+  font-weight: 800;
+}
+
+.dash-page-subtitle {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Compact summary strip in dashboard header */
+.dash-summary-strip {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 10px 18px;
+  box-shadow: 0 2px 8px rgba(20, 32, 52, 0.04);
+}
+
+.dash-summary-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+}
+
+.dash-summary-item b {
+  font-family: var(--font-title);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.dash-summary-item span:last-child {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.dash-summary-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dash-summary-divider {
+  width: 1px;
+  height: 28px;
+  background: var(--border);
+}
+
+/* METRICS STRIP — Matches Evidence Reconstruction / Propagation Stat Tiles */
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
 }
 
-.metric-card {
+.dash-tile {
+  position: relative;
   background: linear-gradient(145deg, #ffffff, #fcfdfa);
   border: 1px solid var(--border);
-  border-radius: var(--panel-radius);
-  padding: 12px 16px;
+  border-radius: 24px;
+  padding: 16px 20px;
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  min-height: 105px;
   box-shadow: var(--card-shadow);
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
-.metric-card:hover {
+.dash-tile:hover {
   transform: translateY(-2px);
   box-shadow: var(--card-shadow-hover);
 }
 
-.metric-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
+.dash-tile.slate {
+  background: linear-gradient(165deg, #233448, #142034);
+  color: #ffffff;
+  border-color: #1e2c3d;
+}
+
+.dash-tile.slate .dash-tile-top {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.dash-tile.slate .dash-tile-arrow {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+}
+
+.dash-tile.slate .dash-tile-val {
+  color: #ffffff;
+}
+
+.dash-tile.slate .dash-tile-val small {
+  color: #fca5a5;
+}
+
+.dash-tile.slate .dash-tile-dots {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.22) 1.5px, transparent 1.8px);
+}
+
+.dash-tile-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+}
+
+.dash-tile-arrow {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
   display: grid;
   place-items: center;
-  flex-shrink: 0;
+  color: var(--ink);
+}
+
+.dash-tile-val {
+  font-family: var(--font-title);
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--ink);
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.dash-tile-val small {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dash-tile-dots {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  width: 50px;
+  height: 38px;
+  opacity: 0.45;
+  background-image: radial-gradient(rgba(20, 32, 52, 0.28) 1.5px, transparent 1.8px);
+  background-size: 8px 8px;
+  mask-image: radial-gradient(circle at 100% 100%, #000, transparent 75%);
+  pointer-events: none;
 }
 
 .metric-card.blue .metric-icon { background: #e0f2fe; color: #0284c7; }
