@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:latlong2/latlong.dart' as latlong;
 
 import '../models/incident.dart';
 import '../theme.dart';
@@ -12,12 +12,17 @@ class MapView extends StatefulWidget {
   final int selected;
   final ValueChanged<int> onPick;
 
+  /// Called with the user's real GPS position once obtained (or on each update).
+  /// HomeScreen uses this to re-sort incidents by actual distance.
+  final void Function(double lat, double lon)? onUserLocation;
+
   const MapView({
     super.key,
     required this.controller,
     required this.incidents,
     required this.selected,
     required this.onPick,
+    this.onUserLocation,
   });
 
   @override
@@ -25,7 +30,7 @@ class MapView extends StatefulWidget {
 }
 
 class _MapViewState extends State<MapView> {
-  LatLng? userLocation;
+  latlong.LatLng? userLocation;
   bool loadingLocation = true;
   String? locationError;
 
@@ -73,7 +78,7 @@ class _MapViewState extends State<MapView> {
         ),
       );
 
-      final location = LatLng(
+      final location = latlong.LatLng(
         position.latitude,
         position.longitude,
       );
@@ -85,6 +90,9 @@ class _MapViewState extends State<MapView> {
         loadingLocation = false;
         locationError = null;
       });
+
+      // Notify parent of the real GPS position so distances can be recalculated.
+      widget.onUserLocation?.call(position.latitude, position.longitude);
 
       // Move map to user's real location.
       widget.controller.move(location, 13.5);
@@ -102,7 +110,7 @@ class _MapViewState extends State<MapView> {
   Widget build(BuildContext context) {
     // Fallback center so map still works before GPS loads.
     final center =
-        userLocation ?? const LatLng(19.0760, 72.8777);
+        userLocation ?? const latlong.LatLng(19.0760, 72.8777);
 
     return Stack(
       children: [
@@ -130,7 +138,7 @@ class _MapViewState extends State<MapView> {
               circles: [
                 for (final incident in widget.incidents)
                   CircleMarker(
-                    point: LatLng(
+                    point: latlong.LatLng(
                       incident.lat,
                       incident.lon,
                     ),
@@ -166,7 +174,7 @@ class _MapViewState extends State<MapView> {
                     i < widget.incidents.length;
                     i++)
                   Marker(
-                    point: LatLng(
+                    point: latlong.LatLng(
                       widget.incidents[i].lat,
                       widget.incidents[i].lon,
                     ),
