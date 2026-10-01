@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import threading
-from datetime import datetime
+from datetime import datetime, time as datetime_time
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -23,6 +23,7 @@ _incidents: Dict[str, Dict] = {}
 _claims: Dict[str, Dict] = {}
 _sources: Dict[str, Dict] = {}
 _evidence: Dict[str, List[Dict]] = {}
+_evidence_records: Dict[str, Dict] = {}
 _advisories: Dict[str, Dict] = {}
 _zones: Dict[str, Dict] = {}
 
@@ -75,6 +76,8 @@ def load_all() -> None:
             _sources[item["id"]] = item
         _evidence.clear()
         _evidence.update(_read_json("evidence.json", {}))
+        _evidence_records.clear()
+        _evidence_records.update(_read_json("evidence_records.json", {}))
         _advisories.clear()
         for item in _read_json("advisories.json", []):
             _advisories[item["id"]] = item
@@ -264,6 +267,64 @@ def add_evidence_event(incident_id: str, event: Dict) -> None:
     with _LOCK:
         _evidence.setdefault(incident_id, []).append(event)
         _write_json("evidence.json", _evidence)
+
+
+def merge_into_timeline(incident_id: str, events: List[Dict]) -> List[Dict]:
+    """Append evidence observations without replacing prior incident history."""
+    with _LOCK:
+        timeline = _evidence.setdefault(incident_id, [])
+        known = {item.get("id") for item in timeline}
+        timeline.extend(event for event in events if event.get("id") not in known)
+        def chronological_key(item):
+            value = item.get("occurred_at") or item.get("timestamp") or item.get("time", "")
+            try:
+                parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+                return (parsed.date().isoformat(), parsed.hour, parsed.minute, parsed.second)
+            except (ValueError, TypeError):
+                try:
+                    parsed_time = datetime_time.fromisoformat(str(value))
+                    return (datetime.now().date().isoformat(), parsed_time.hour, parsed_time.minute, parsed_time.second)
+                except (ValueError, TypeError):
+                    return ("9999-12-31", 23, 59, 59)
+        timeline.sort(key=chronological_key)
+        _write_json("evidence.json", _evidence)
+        return [dict(event) for event in timeline]
+
+
+def add_evidence_record(record: Dict) -> Dict:
+    with _LOCK:
+        _evidence_records[record["evidence_id"]] = record
+        _write_json("evidence_records.json", _evidence_records)
+        return dict(record)
+
+
+def get_evidence_record(evidence_id: str) -> Optional[Dict]:
+    with _LOCK:
+        record = _evidence_records.get(evidence_id)
+        return dict(record) if record else None
+
+
+def update_evidence_record(evidence_id: str, **fields) -> Optional[Dict]:
+    with _LOCK:
+        record = _evidence_records.get(evidence_id)
+        if not record:
+            return None
+        record.update(fields)
+        _write_json("evidence_records.json", _evidence_records)
+        return dict(record)
+
+
+def get_evidence_records(incident_id: str) -> List[Dict]:
+    with _LOCK:
+        return [dict(item) for item in _evidence_records.values() if item.get("incident_id") == incident_id]
+
+
+def next_evidence_id() -> str:
+    with _LOCK:
+        index = len(_evidence_records) + 1
+        while f"EVD-{index:04d}" in _evidence_records:
+            index += 1
+        return f"EVD-{index:04d}"
 
 
 # --------------------------------------------------------------------- advisories

@@ -48,6 +48,37 @@ WARMUP_FRAMES = 45
 # Foreground ratio (share of frame pixels) that maps to density 1.0.
 FG_REF = 0.24
 
+
+class TemporalSignalAnalyzer:
+    """Shared temporal signal logic for live cameras and uploaded evidence."""
+    def __init__(self, person_capacity: float = 46) -> None:
+        self.person_capacity = person_capacity
+        self.motion_ref = 0.0030
+        self.velocity_ref = 0.15
+        self.motion_ema = None
+        self.shift_ema = None
+        self.density_ema = None
+        self.density_history = deque(maxlen=30)
+
+    def update(self, detection: Dict, raw_motion: float, centroid_shift: float) -> Dict:
+        count, fg_ratio = detection["person_count"], detection["foreground_ratio"]
+        count_score = min(1.0, count / max(1.0, float(self.person_capacity)))
+        fg_score = min(1.0, fg_ratio / FG_REF)
+        density_raw = max(0.0, min(1.0, 0.6 * count_score + 0.4 * fg_score))
+        self.density_ema = density_raw if self.density_ema is None else 0.7 * self.density_ema + 0.3 * density_raw
+        self.motion_ema = raw_motion if self.motion_ema is None else 0.8 * self.motion_ema + 0.2 * raw_motion
+        self.shift_ema = centroid_shift if self.shift_ema is None else 0.8 * self.shift_ema + 0.2 * centroid_shift
+        self.motion_ref = max(self.motion_ref, self.motion_ema)
+        self.velocity_ref = max(self.velocity_ref, self.shift_ema)
+        still = 1.0 - 0.7 * (self.motion_ema / (self.motion_ref + 1e-6))
+        slow = 1.0 - 0.8 * (self.shift_ema / (self.velocity_ref + 1e-6))
+        anomaly = max(0.0, min(1.0, 0.65 * still + 0.35 * slow))
+        velocity = min(1.0, self.shift_ema / (self.velocity_ref + 1e-6))
+        self.density_history.append(self.density_ema)
+        persistence = sum(v >= 0.4 for v in self.density_history) / len(self.density_history)
+        return {"density": round(self.density_ema, 3), "motion_anomaly": round(anomaly, 3),
+                "persistence": round(persistence, 3), "velocity": round(velocity, 3)}
+
 # Camera -> incident mapping (config lives here to avoid import cycles).
 CAMERA_CONFIG: List[Dict] = [
     {
@@ -304,60 +335,16 @@ class CameraProcessor(threading.Thread):
         self.last_metrics: Dict = {}
         self._prev_gray: Optional[np.ndarray] = None
         self._prev_centroid = None
-        self._motion_ref = 0.0030
-        self._velocity_ref = 0.15
-        self._motion_ema = None
-        self._shift_ema = None
-        self._density_ema = None
-        self._density_history = deque(maxlen=30)
+        self.signal_analyzer = TemporalSignalAnalyzer(config["person_capacity"])
 
     # ------------------------------------------------------------------ helpers
     def _signals(self, detection: Dict, raw_motion: float, centroid_shift: float) -> Dict:
         count = detection["person_count"]
         fg_ratio = detection["foreground_ratio"]
-        person_capacity = float(self.config["person_capacity"])
-
-        count_score = min(1.0, count / person_capacity)
-        fg_score = min(1.0, fg_ratio / FG_REF)
-        density_raw = max(0.0, min(1.0, 0.6 * count_score + 0.4 * fg_score))
-        # EMA smooths brief detection drop-outs (e.g. across loop restarts).
-        self._density_ema = (
-            density_raw
-            if self._density_ema is None
-            else 0.7 * self._density_ema + 0.3 * density_raw
-        )
-        density = self._density_ema
-
-        # Smooth raw signals so single noisy frames do not swing the score.
-        self._motion_ema = (
-            raw_motion if self._motion_ema is None else 0.8 * self._motion_ema + 0.2 * raw_motion
-        )
-        self._shift_ema = (
-            centroid_shift
-            if self._shift_ema is None
-            else 0.8 * self._shift_ema + 0.2 * centroid_shift
-        )
-
-        # References are the maximum seen (free-flowing movement).
-        self._motion_ref = max(self._motion_ref, self._motion_ema)
-        self._velocity_ref = max(self._velocity_ref, self._shift_ema)
-
-        still = 1.0 - 0.7 * (self._motion_ema / (self._motion_ref + 1e-6))
-        slow = 1.0 - 0.8 * (self._shift_ema / (self._velocity_ref + 1e-6))
-        motion_anomaly = max(0.0, min(1.0, 0.65 * still + 0.35 * slow))
-
-        velocity = min(1.0, self._shift_ema / (self._velocity_ref + 1e-6))
-
-        self._density_history.append(density)
-        persistence = sum(1 for value in self._density_history if value >= 0.4) / max(
-            1, len(self._density_history)
-        )
+        temporal = self.signal_analyzer.update(detection, raw_motion, centroid_shift)
 
         return {
-            "density": round(density, 3),
-            "motion_anomaly": round(motion_anomaly, 3),
-            "persistence": round(persistence, 3),
-            "velocity": round(velocity, 3),
+            **temporal,
             "raw": {
                 "person_count": count,
                 "blob_count": detection["blob_count"],

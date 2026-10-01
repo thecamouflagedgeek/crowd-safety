@@ -83,6 +83,7 @@ export async function fetchEvidence(incidentId = 'INC001') {
     return {
       incident: data.incident || DEFAULT_INCIDENT,
       timeline,
+      uploaded_evidence: data.uploaded_evidence || [],
       sources,
       cameras: data.cameras || [],
       metrics: data.metrics || {
@@ -99,6 +100,7 @@ export async function fetchEvidence(incidentId = 'INC001') {
     return {
       incident: INCIDENTS_LIST.find((i) => i.id === incidentId) || DEFAULT_INCIDENT,
       timeline: runtimeTimeline,
+      uploaded_evidence: [],
       sources: SUPPORTING_SOURCES,
       cameras: [],
       metrics: {
@@ -111,6 +113,35 @@ export async function fetchEvidence(incidentId = 'INC001') {
       error: err.message
     }
   }
+}
+
+export async function uploadEvidence(incidentId, file, metadata = {}, onProgress = () => {}) {
+  const form = new FormData()
+  form.append('video', file)
+  for (const [key, value] of Object.entries(metadata)) if (value) form.append(key, value)
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest()
+    request.open('POST', `${API_BASE}/incidents/${encodeURIComponent(incidentId)}/evidence`)
+    request.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgress(Math.round((event.loaded / event.total) * 100))
+    }
+    request.onload = () => {
+      if (request.status < 200 || request.status >= 300) {
+        let message = `Upload failed (${request.status})`
+        try { message = JSON.parse(request.responseText).detail || message } catch { }
+        reject(new Error(message)); return
+      }
+      try { resolve(JSON.parse(request.responseText)) } catch { reject(new Error('Invalid server response')) }
+    }
+    request.onerror = () => reject(new Error('Could not connect to the evidence server'))
+    request.send(form)
+  })
+}
+
+export async function fetchEvidenceItem(evidenceId) {
+  const response = await fetch(`${API_BASE}/evidence/item/${encodeURIComponent(evidenceId)}`)
+  if (!response.ok) throw new Error(`Could not load evidence (${response.status})`)
+  return response.json()
 }
 
 export async function fetchCameras() {

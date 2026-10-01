@@ -145,6 +145,9 @@ Results are cached 10 minutes and fetched concurrently under a hard time budget.
 | GET | `/cameras` | Camera config + live YOLO metrics + zone + timestamp |
 | POST | `/verify` | Multi-source verification (+ corroborating news) |
 | GET | `/evidence/{id}` | Evidence timeline + references |
+| POST | `/incidents/{id}/evidence` | Upload, hash, and analyze an authority video |
+| GET | `/incidents/{id}/evidence` | Uploaded evidence records for an incident |
+| GET | `/evidence/item/{id}` | Evidence status, analysis samples, events, and metadata |
 | GET | `/sources/{id}?live=true` | Source graph (optionally + live news) |
 | POST | `/validation` | Authority claim/source validation |
 | POST | `/advisories`, GET `/advisories` | Advisory publish / retrieve |
@@ -152,6 +155,13 @@ Results are cached 10 minutes and fetched concurrently under a hard time budget.
 | POST | `/route` | Safe route (OSRM or fallback) |
 | GET | `/news` | Incident/location public-safety news |
 | GET | `/videos/{file}` | Static camera video |
+
+Authority evidence uploads are stored under `videos/evidence/{evidence_id}/` and
+served through the same `/videos` static mount as the CCTV clips. Analysis runs
+in a background thread, samples at 3 FPS for up to 120 seconds, and uses the
+shared `Detector` and `TemporalSignalAnalyzer` from the live camera pipeline.
+The original file's SHA-256 identifies the uploaded bytes; it does not itself
+establish legal admissibility or a complete chain of custody.
 
 ## Quick checks
 

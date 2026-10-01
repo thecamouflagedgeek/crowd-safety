@@ -168,3 +168,41 @@
 .ev-flag-text small{font-size:10.5px;color:var(--mute);line-height:1.25}
 .ev-flag.red .ev-flag-line{background:#d94452}
 .ev-flag.red .ev-flag-pin{background:#d94452;box-shadow:0 0 0 1.5px #d94452}
+
+/* Authority evidence ingestion */
+.ev-ingestion{background:#fff;border:1px solid var(--line)}
+.ev-ingest-status{padding:7px 11px;border-radius:999px;background:#e8f5ee;color:#16734d;font-size:10px;font-weight:800;letter-spacing:.04em}
+.ev-ingest-status.failed{background:#ffe3e5;color:#b42332}
+.ev-ingest-head-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.ev-ingest-head-actions select{max-width:260px;border:1px solid var(--line);border-radius:999px;background:#fff;padding:8px 12px;color:#25313b;font-size:10px;font-weight:700}
+.ev-upload-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.ev-file-pick{display:flex;align-items:center;gap:10px;flex:1;min-width:240px;min-height:54px;border:1px dashed #aab5bf;border-radius:16px;padding:12px 16px;color:#394756;font-size:12px;font-weight:700;cursor:pointer}
+.ev-file-pick input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.ev-file-pick:hover{border-color:#278d70;background:#f5faf7}
+.ev-upload-row button:disabled{opacity:.45;cursor:not-allowed}
+.ev-upload-progress{height:5px;margin-top:12px;border-radius:8px;background:#e6ebee;overflow:hidden}
+.ev-upload-progress i{display:block;height:100%;background:#278d70;transition:width .2s}
+.ev-upload-error{color:#b42332;font-size:12px;font-weight:700}
+.ev-ingest-stages{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.ev-ingest-stages span{border-radius:999px;background:#edf0f2;padding:6px 10px;color:#687583;font-size:10px;font-weight:700}
+.ev-ingest-stages span.done{background:#e8f5ee;color:#16734d}
+.ev-evidence-meta{display:flex;gap:8px 16px;flex-wrap:wrap;margin:14px 0;padding:12px 14px;border-radius:14px;background:#f2f4f4;color:#45515e;font-size:10px}
+.ev-evidence-meta>b{color:#111a22}.ev-evidence-meta .ev-hash{flex-basis:100%;overflow-wrap:anywhere;font-family:ui-monospace,monospace}
+.ev-reconstruction-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(220px,.8fr);gap:16px;margin-top:16px}
+.ev-reconstruction-grid h4,.ev-signal-chart h4,.ev-upload-events h4{margin:0 0 10px;color:#15202a;font-size:11px;letter-spacing:.07em}
+.ev-ingest-video-wrap{position:relative;overflow:hidden;background:#090e13;border-radius:16px;line-height:0}
+.ev-ingest-video-wrap video{display:block;width:100%;max-height:420px;object-fit:contain}
+.ev-detection-overlay{position:absolute;inset:0;pointer-events:none}
+.ev-detection-box{position:absolute;border:2px solid #e4ff3b;box-shadow:0 0 0 1px rgba(0,0,0,.45)}
+.ev-detection-box small{position:absolute;top:-17px;left:-2px;background:#e4ff3b;color:#10151a;font:bold 8px/14px ui-monospace,monospace;padding:0 4px}
+.ev-box-note{margin:6px 0 0;color:#71808d;font-size:10px}
+.ev-signal-metrics{padding:14px;border-radius:16px;background:#f2f4f4}
+.ev-signal-metrics>div{display:flex;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px solid rgba(11,16,23,.08);font-size:11px;color:#5d6873}
+.ev-signal-metrics>div b{color:#101820;font-variant-numeric:tabular-nums}
+.ev-signal-metrics>small{display:block;margin-top:10px;color:#78838c;font-size:9px;line-height:1.4}
+.ev-signal-chart{margin-top:18px;padding:14px;border-radius:16px;background:#f5f7f6}
+.ev-signal-chart-head{display:flex;justify-content:space-between;gap:12px}.ev-signal-chart-head span{font-size:10px;color:#7b8794}
+.ev-chart-area{height:190px}.ev-chart-area svg{width:100%;height:100%;overflow:visible}
+.ev-signal-heatmap{display:flex;gap:2px;height:12px;margin-top:6px}.ev-signal-heatmap i{flex:1;min-width:1px;background:#dc5949;border-radius:2px}
+.ev-upload-events{margin-top:16px}.ev-upload-events>button{display:grid;grid-template-columns:54px 1fr;gap:4px 10px;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:transparent;padding:10px 6px;cursor:pointer;color:#15202a}
+.ev-upload-events>button:disabled{cursor:default}.ev-upload-events>button>b{grid-row:span 2;font:700 11px ui-monospace,monospace;color:#278d70;padding-top:1px}.ev-upload-events>button>span{font-size:11px;font-weight:700}.ev-upload-events>button>small{color:#74808b;font-size:9px}
+@media(max-width:720px){.ev-reconstruction-grid{grid-template-columns:1fr}.ev-upload-row .ev-btn{width:100%;justify-content:center}}

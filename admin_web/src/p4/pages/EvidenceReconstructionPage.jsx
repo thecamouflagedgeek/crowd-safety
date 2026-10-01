@@ -8,7 +8,7 @@ import { IncidentLifecycle } from '../components/IncidentLifecycle'
 import { IncidentSelectorBar } from '../components/IncidentSelectorBar'
 import { RadialEvidenceConvergence } from '../components/RadialEvidenceConvergence'
 import { EvidenceDrawer } from '../components/EvidenceDrawer'
-import { fetchIncidents } from '../services/api'
+import { fetchIncidents, uploadEvidence, fetchEvidenceItem, mediaUrl } from '../services/api'
 import { DEFAULT_INCIDENT, INCIDENTS_LIST, TIMELINE_EVENTS, CAMERAS_CONFIG } from '../services/mockData'
 import { adminVideoFor } from '../utils/adminVideos'
 import { getSourcesFor } from '../services/incidentSources'
@@ -66,6 +66,14 @@ function Contours() {
 export function EvidenceReconstructionPage({ onNavigate }) {
   const [incidents, setIncidents] = useState(INCIDENTS_LIST)
   const [selectedIncident, setSelectedIncident] = useState(DEFAULT_INCIDENT)
+  const [evidenceFile, setEvidenceFile] = useState(null)
+  const [evidenceRecord, setEvidenceRecord] = useState(null)
+  const [evidenceRecords, setEvidenceRecords] = useState([])
+  const [uploadPercent, setUploadPercent] = useState(0)
+  const [uploadError, setUploadError] = useState('')
+  const [isUploading, setIsUploading] = useState(false)
+  const [evidenceTime, setEvidenceTime] = useState(0)
+  const evidenceVideoRef = useRef(null)
   const [selectedNode, setSelectedNode] = useState(null)
   const [drawerItem, setDrawerItem] = useState(null)
   const [activeCamIndex, setActiveCamIndex] = useState(0)
@@ -81,6 +89,54 @@ export function EvidenceReconstructionPage({ onNavigate }) {
       if (res.data) setIncidents(res.data)
     })
   }, [])
+
+  // Upload state is session-only: after a browser refresh the original dashboard returns.
+  useEffect(() => {
+    setEvidenceRecord(null)
+    setEvidenceRecords([])
+    setEvidenceFile(null)
+    setUploadError('')
+    setEvidenceTime(0)
+  }, [selectedIncident.id])
+
+  useEffect(() => {
+    if (!evidenceRecord?.evidence_id || !['UPLOADED', 'ANALYZING'].includes(evidenceRecord.status)) return undefined
+    let active = true
+    const poll = async () => {
+      try {
+        const current = await fetchEvidenceItem(evidenceRecord.evidence_id)
+        if (active) {
+          setEvidenceRecord(current)
+          setEvidenceRecords((records) => records.map((item) => item.evidence_id === current.evidence_id ? current : item))
+        }
+      } catch (error) { if (active) setUploadError(error.message) }
+    }
+    const timer = window.setInterval(poll, 1500)
+    poll()
+    return () => { active = false; window.clearInterval(timer) }
+  }, [evidenceRecord?.evidence_id, evidenceRecord?.status])
+
+  const handleEvidenceUpload = async (event) => {
+    event.preventDefault()
+    if (!evidenceFile) return
+    setUploadError('')
+    setIsUploading(true)
+    setUploadPercent(0)
+    try {
+      const record = await uploadEvidence(selectedIncident.id, evidenceFile, { source: 'Authority Upload' }, setUploadPercent)
+      setEvidenceRecord(record)
+      setEvidenceRecords((records) => [record, ...records])
+      setEvidenceTime(0)
+    } catch (error) { setUploadError(error.message) }
+    finally { setIsUploading(false) }
+  }
+
+  const seekEvidence = (seconds) => {
+    if (!evidenceVideoRef.current) return
+    evidenceVideoRef.current.currentTime = Math.max(0, seconds || 0)
+    setEvidenceTime(Math.max(0, seconds || 0))
+    evidenceVideoRef.current.play().catch(() => {})
+  }
 
   const togglePlay = () => {
     if (!videoRef.current) return
@@ -165,7 +221,7 @@ export function EvidenceReconstructionPage({ onNavigate }) {
         </button>
       </div>
 
-      <IncidentLifecycle currentStep="INVESTIGATING" incidentId={selectedIncident.id} />
+      {!evidenceRecord && <IncidentLifecycle currentStep="INVESTIGATING" incidentId={selectedIncident.id} />}
 
       <IncidentSelectorBar
         incidents={incidents}
@@ -174,6 +230,24 @@ export function EvidenceReconstructionPage({ onNavigate }) {
         timeRange="18:00 — 18:30"
       />
 
+      <EvidenceIngestion
+        incident={selectedIncident}
+        file={evidenceFile}
+        onFile={setEvidenceFile}
+        onSubmit={handleEvidenceUpload}
+        isUploading={isUploading}
+        uploadPercent={uploadPercent}
+        error={uploadError}
+        record={evidenceRecord}
+        records={evidenceRecords}
+        onSelectEvidence={(item) => { setEvidenceRecord(item); setEvidenceTime(0) }}
+        videoRef={evidenceVideoRef}
+        currentTime={evidenceTime}
+        onTime={setEvidenceTime}
+        onSeek={seekEvidence}
+      />
+
+      {!evidenceRecord && <>
       {/* HERO + STAT TILES */}
       <div className="ev-hero-grid">
         <section className="ev-hero">
@@ -452,6 +526,85 @@ export function EvidenceReconstructionPage({ onNavigate }) {
           onNavigateVerify={(item) => onNavigate('/verification', { fromEvidence: item })}
         />
       )}
+      </>}
     </div>
+  )
+}
+function EvidenceIngestion({ incident, file, onFile, onSubmit, isUploading, uploadPercent, error, record, records, onSelectEvidence, videoRef, currentTime, onTime, onSeek }) {
+  const analysis = record?.analysis
+  const samples = analysis?.samples || []
+  const nearest = samples.reduce((best, sample) => !best || Math.abs(sample.time_seconds - currentTime) < Math.abs(best.time_seconds - currentTime) ? sample : best, null)
+  const chartX = (index) => samples.length < 2 ? 500 : 24 + (index / (samples.length - 1)) * 952
+  const motionPoints = samples.map((sample, index) => `${chartX(index)},${182 - Math.min(1, sample.motion_energy || 0) * 150}`).join(' ')
+  const densityPoints = samples.map((sample, index) => `${chartX(index)},${182 - Math.min(1, sample.density || 0) * 150}`).join(' ')
+  const stage = isUploading ? `Uploading… ${uploadPercent}%` : record?.stage || (record?.status === 'ANALYZED' ? 'ANALYZED ✓' : record?.status || 'Ready')
+  const sourceWidth = Math.min(analysis?.width || 640, 480)
+  const sourceHeight = analysis?.width ? sourceWidth * analysis.height / analysis.width : 270
+  return (
+    <section className="ev-card ev-ingestion">
+      <div className="ev-card-head">
+        <div><h3 className="ev-card-title" style={{ color: 'var(--ink)' }}>INGEST NEW EVIDENCE</h3>
+          <div className="ev-card-sub" style={{ color: 'var(--mute)' }}>Add a video to {incident.id} and analyze it with the existing CCTV detector.</div></div>
+        <div className="ev-ingest-head-actions">{records.length > 1 && <select value={record?.evidence_id || ''} onChange={(event) => onSelectEvidence(records.find((item) => item.evidence_id === event.target.value))}>{records.map((item) => <option key={item.evidence_id} value={item.evidence_id}>{item.evidence_id} · {item.filename}</option>)}</select>}
+          <span className={`ev-ingest-status ${record?.status === 'FAILED' ? 'failed' : ''}`}>{stage}</span></div>
+      </div>
+      <form className="ev-upload-row" onSubmit={onSubmit}>
+        <label className="ev-file-pick"><Video size={19} /><span>{file?.name || 'Choose an MP4, MOV, or WebM video'}</span>
+          <input type="file" accept="video/mp4,video/quicktime,video/webm,video/*" onChange={(event) => onFile(event.target.files?.[0] || null)} /></label>
+        <button className="ev-btn ink" type="submit" disabled={!file || isUploading}>{isUploading ? 'UPLOADING…' : 'ANALYZE EVIDENCE'}</button>
+      </form>
+      {isUploading && <div className="ev-upload-progress"><i style={{ width: `${uploadPercent}%` }} /></div>}
+      {error && <p className="ev-upload-error">{error}</p>}
+      {record && <>
+        {record.status === 'FAILED' && <p className="ev-upload-error">Could not analyze evidence. {record.error || 'Original file is preserved.'}</p>}
+        {record.status !== 'FAILED' && <div className="ev-ingest-stages"><span className={record.status ? 'done' : ''}>Uploaded</span><span className={record.sha256 ? 'done' : ''}>Hashing</span><span className={record.status === 'ANALYZING' || record.status === 'ANALYZED' ? 'done' : ''}>Analyzing frames</span><span className={record.status === 'ANALYZED' ? 'done' : ''}>Signals + timeline</span></div>}
+        <div className="ev-evidence-meta"><b>Evidence {record.evidence_id}</b><span>{record.source || 'Authority Upload'}</span><span>{record.filename}</span>
+          <span>Uploaded {new Date(record.uploaded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          {record.duration_seconds != null && <span>{record.duration_seconds.toFixed(1)} sec</span>}
+          {record.camera_name && <span>Camera: {record.camera_name}</span>}
+          {record.location && <span>Location: {record.location}</span>}
+          <span className="ev-hash">File integrity fingerprint · SHA-256: {record.sha256}</span>
+          {record.analysis && <span>CV: {record.analysis.backend}{record.analysis.model ? ` · ${record.analysis.model}` : ''}</span>}
+          {record.analysis?.incident_reassessment && <span>Incident re-evaluated · risk {Math.round(record.analysis.incident_reassessment.risk_score * 100)}% · {record.analysis.incident_reassessment.severity}</span>}
+        </div>
+        {record.status === 'ANALYZED' && analysis && <>
+          <div className="ev-reconstruction-grid">
+            <div>
+              <h4>ORIGINAL VIDEO · {record.filename}</h4>
+              <div className="ev-ingest-video-wrap">
+                <video ref={videoRef} src={mediaUrl(record.video_url)} controls playsInline preload="metadata"
+                  onTimeUpdate={(event) => onTime(event.currentTarget.currentTime)} onClick={() => {}} />
+                {nearest?.detections?.length > 0 && <div className="ev-detection-overlay" aria-label="Detector person boxes">
+                  {nearest.detections.map((box, index) => <div key={index} className="ev-detection-box" style={{ left: `${box[0] / sourceWidth * 100}%`, top: `${box[1] / sourceHeight * 100}%`, width: `${(box[2] - box[0]) / sourceWidth * 100}%`, height: `${(box[3] - box[1]) / sourceHeight * 100}%` }}><small>PERSON</small></div>)}
+                </div>}
+              </div>
+              <p className="ev-box-note">{nearest?.detections?.length ? `${nearest.detections.length} detector person box(es) at ${Math.floor(currentTime)} sec` : 'No person boxes in the nearest sampled frame. Counts and occupancy use detector signals.'}</p>
+            </div>
+            <div className="ev-signal-metrics"><h4>MEASURED CV SIGNALS</h4>
+              <div><span>Persons observed</span><b>{nearest?.person_count ?? analysis.metrics.person_count}</b></div>
+              <div><span>Density</span><b>{Math.round((nearest?.density ?? analysis.metrics.density) * 100)}%</b></div>
+              <div><span>Motion energy</span><b>{(nearest?.motion_energy ?? analysis.metrics.motion).toFixed(3)}</b></div>
+              <div><span>Persistence</span><b>{Math.round((nearest?.persistence ?? analysis.metrics.persistence) * 100)}%</b></div>
+              <div><span>Detector confidence</span><b>{nearest?.confidence ? `${Math.round(nearest.confidence * 100)}%` : '—'}</b></div>
+              <small>Signal sample near {Math.floor(currentTime)} sec · measurements are clip-derived.</small>
+            </div>
+          </div>
+          <div className="ev-signal-chart"><div className="ev-signal-chart-head"><h4>MOTION / DENSITY OVER TIME</h4><span>Motion · Density · Click a sample to seek</span></div>
+            <div className="ev-chart-area"><svg viewBox="0 0 1000 210" preserveAspectRatio="none" role="img" aria-label="Motion and density signal samples">
+              <line x1="24" y1="182" x2="976" y2="182" stroke="#aab5bf" strokeWidth="1" />
+              {motionPoints && <polyline points={motionPoints} fill="none" stroke="#e45747" strokeWidth="2.5" vectorEffect="non-scaling-stroke" />}
+              {densityPoints && <polyline points={densityPoints} fill="none" stroke="#278d70" strokeWidth="2.5" vectorEffect="non-scaling-stroke" />}
+              <line x1={24 + Math.min(1, currentTime / Math.max(analysis.duration_seconds, 1)) * 952} x2={24 + Math.min(1, currentTime / Math.max(analysis.duration_seconds, 1)) * 952} y1="12" y2="182" stroke="#111820" strokeWidth="1.5" opacity=".65" />
+              {samples.map((sample, index) => { const x = chartX(index); const y = 182 - Math.min(1, sample.motion_energy || 0) * 150; return <circle key={index} cx={x} cy={y} r={Math.abs(sample.time_seconds-currentTime)<0.5 ? 7 : 3.5} fill="#e45747" onClick={() => onSeek(sample.time_seconds)} style={{ cursor: 'pointer' }}><title>{sample.time_seconds}s · motion {sample.motion_energy} · density {sample.density}</title></circle> })}
+              {analysis.events.map((event) => <line key={event.id} x1={24 + event.timestamp_seconds / Math.max(analysis.duration_seconds, 1) * 952} x2={24 + event.timestamp_seconds / Math.max(analysis.duration_seconds, 1) * 952} y1="25" y2="182" stroke="#d94452" strokeDasharray="4 4" onClick={() => onSeek(event.timestamp_seconds)} style={{ cursor: 'pointer' }} />)}
+            </svg></div>
+            <div className="ev-signal-heatmap" aria-label="Motion signal intensity by sampled time">{samples.map((sample, index) => <i key={index} title={`${sample.time_seconds}s · motion ${sample.motion_energy}`} style={{ opacity: 0.18 + Math.min(0.82, sample.motion_energy * 4) }} />)}</div>
+          </div>
+          <div className="ev-upload-events"><h4>INCIDENT TIMELINE · {incident.id}</h4>
+            {analysis.timeline?.length ? analysis.timeline.map((event, index) => <button key={event.id || index} onClick={() => event.timestamp_seconds != null && onSeek(event.timestamp_seconds)} disabled={event.timestamp_seconds == null}><b>{event.timestamp_label || event.time || event.timestamp}</b><span>{event.event || event.description}</span><small>{event.source || 'Incident record'}{event.evidence_id ? ` · ${event.evidence_id} · Click to seek video` : ''}</small></button>) : <p>No sustained motion or density elevation was found relative to this clip’s initial baseline.</p>}
+          </div>
+        </>}
+      </>}
+    </section>
   )
 }
