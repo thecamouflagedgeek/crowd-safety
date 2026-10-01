@@ -2,7 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:latlong2/latlong.dart' as geo;
 import '../models/incident.dart';
 import '../services/api_service.dart';
 import '../theme.dart';
@@ -56,7 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void focus(int n) {
     if (n >= items.length) return;
     setState(() => sel = n);
-    map.move(LatLng(items[n].lat - .004, items[n].lon), 13.6); // offset so marker sits above the card
+    map.move(geo.LatLng(items[n].lat - .004, items[n].lon), 13.6); // offset so marker sits above the card
   }
 
   void resetPager() {
@@ -291,7 +291,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   _Press(
                     onTap: () {
                       HapticFeedback.lightImpact();
-                      map.move(const LatLng(19.0760, 72.8777), 13.5);
+                      map.move(const geo.LatLng(19.0760, 72.8777), 13.5);
                     },
                     child: const _Glass(
                       radius: 26,

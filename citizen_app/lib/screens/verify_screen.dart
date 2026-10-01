@@ -148,7 +148,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
                       child: Row(children: [
                         Icon(Icons.check_circle, size: 18, color: col),
                         const SizedBox(width: 10),
-                        Expanded(child: Text(label, style: const TextStyle(fontSize: 15))),
+                        Expanded(child: Text(label ?? '', style: const TextStyle(fontSize: 15))),
                       ]),
                     );
                   }),

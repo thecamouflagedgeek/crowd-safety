@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:latlong2/latlong.dart' as geo;
 
 import '../models/incident.dart';
 import '../theme.dart';
@@ -25,7 +25,7 @@ class MapView extends StatefulWidget {
 }
 
 class _MapViewState extends State<MapView> {
-  LatLng? userLocation;
+  geo.LatLng? userLocation;
   bool loadingLocation = true;
   String? locationError;
 
@@ -73,7 +73,7 @@ class _MapViewState extends State<MapView> {
         ),
       );
 
-      final location = LatLng(
+      final location = geo.LatLng(
         position.latitude,
         position.longitude,
       );
@@ -102,7 +102,7 @@ class _MapViewState extends State<MapView> {
   Widget build(BuildContext context) {
     // Fallback center so map still works before GPS loads.
     final center =
-        userLocation ?? const LatLng(19.0760, 72.8777);
+        userLocation ?? const geo.LatLng(19.0760, 72.8777);
 
     return Stack(
       children: [
@@ -130,7 +130,7 @@ class _MapViewState extends State<MapView> {
               circles: [
                 for (final incident in widget.incidents)
                   CircleMarker(
-                    point: LatLng(
+                    point: geo.LatLng(
                       incident.lat,
                       incident.lon,
                     ),
@@ -166,7 +166,7 @@ class _MapViewState extends State<MapView> {
                     i < widget.incidents.length;
                     i++)
                   Marker(
-                    point: LatLng(
+                    point: geo.LatLng(
                       widget.incidents[i].lat,
                       widget.incidents[i].lon,
                     ),

@@ -51,7 +51,7 @@ class Api {
         if (list is! List) throw Exception('Unexpected /incidents shape');
         return list.map((e) => Incident.fromJson(Map.from(e))).toList();
       },
-      () => Mock.incidents);
+      () => Mock.incidents());
 
   /// GET /advisories  →  {"advisories": [...]}
   static Future<List<Map>> advisories() => _go(
@@ -61,7 +61,7 @@ class Api {
         if (list is! List) throw Exception('Unexpected /advisories shape');
         return list.map((e) => Map.from(e) as Map).toList();
       },
-      () => Mock.advisories);
+      () => Mock.advisories());
 
   /// POST /verify  →  {status, confidence, severity, impact, supporting_sources, ...}
   static Future<Map> verify(String claim, {String? location, String? incidentId}) =>
