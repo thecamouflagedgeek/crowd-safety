@@ -31,17 +31,17 @@ export function IncidentSelectorBar({
         </div>
 
         <div className="p4-selector-field">
-          <MapPin size={14} style={{ color: 'var(--p4-accent-lime)' }} />
+          <MapPin size={14} style={{ color: 'var(--ink)' }} />
           <span className="p4-field-label">Location:</span>
-          <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)' }}>
             {selectedIncident?.location || 'Gate 3'}
           </span>
         </div>
 
         <div className="p4-selector-field">
-          <Clock size={14} style={{ color: 'var(--p4-text-secondary)' }} />
+          <Clock size={14} style={{ color: 'var(--ink-secondary)' }} />
           <span className="p4-field-label">Time Window:</span>
-          <span style={{ fontSize: 12, fontWeight: 600, color: '#cbd5e1', fontFamily: 'var(--p4-font-mono)' }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)', fontFamily: 'var(--font-mono)' }}>
             {timeRange}
           </span>
         </div>
@@ -52,13 +52,14 @@ export function IncidentSelectorBar({
           <AlertTriangle size={12} style={{ display: 'inline', marginRight: 4 }} />
           {selectedIncident?.severity || 'HIGH'} SEVERITY
         </span>
-        <span className="p4-pill-badge lime">
+        <span className="p4-pill-badge yellow">
           {Math.round((selectedIncident?.confidence || 0.91) * 100)}% CONFIDENCE
         </span>
         {onRefresh && (
           <button
             onClick={onRefresh}
-            className="p4-cctv-btn"
+            className="p4-outline-btn"
+            style={{ padding: '6px 10px' }}
             title="Refresh incident telemetry"
           >
             <RefreshCw size={13} />

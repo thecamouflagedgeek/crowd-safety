@@ -16,7 +16,7 @@ export function VerificationPage({ onNavigate }) {
         <div className="p4-header-info">
           <span className="p4-badge-tag">DECISION INTEGRITY GATEWAY</span>
           <h1 className="p4-page-title">
-            <ShieldCheck size={24} style={{ color: 'var(--p4-accent-green)' }} />
+            <ShieldCheck size={24} style={{ color: 'var(--ink)' }} />
             INFORMATION VERIFICATION
           </h1>
           <p className="p4-page-subtitle">
@@ -26,8 +26,7 @@ export function VerificationPage({ onNavigate }) {
 
         <div style={{ display: 'flex', gap: 10 }}>
           <button
-            className="p4-btn p4-btn-primary"
-            style={{ width: 'auto', padding: '9px 16px', fontSize: 11 }}
+            className="p4-ink-btn"
             onClick={() => onNavigate('/advisories')}
           >
             <span>DRAFT OFFICIAL ADVISORY</span>

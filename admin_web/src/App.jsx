@@ -1,10 +1,29 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MapContainer, Marker, TileLayer, ZoomControl, useMap } from 'react-leaflet'
 import L from 'leaflet'
-import { Activity, AlertTriangle, Bell, Camera, Check, ChevronRight, Clock3, Crosshair, Filter, Layers3, List, LoaderCircle, MapPin, Menu, Radio, Share2, Shield, Siren, Users, Video, X } from 'lucide-react'
+import {
+  Activity,
+  AlertTriangle,
+  Bell,
+  Camera,
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  Layers3,
+  MapPin,
+  Menu,
+  RotateCcw,
+  Share2,
+  Shield,
+  Siren,
+  Users,
+  Video,
+  X
+} from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 import './App.css'
 import './p4/styles/p4.css'
+import { HeatmapLayer } from './HeatmapLayer'
 import { EvidenceReconstructionPage } from './p4/pages/EvidenceReconstructionPage'
 import { InformationPropagationPage } from './p4/pages/InformationPropagationPage'
 import { VerificationPage } from './p4/pages/VerificationPage'
@@ -27,11 +46,12 @@ const demoIncidents = [
   { id: 'INC014', type: 'Public Gathering', location: 'Marina Beach, Chennai', latitude: 13.0500, longitude: 80.2824, severity: 'LOW', confidence: .77, density: 45, velocity: .68, status: 'MONITORING', timestamp: '06:32', camera: 'Camera 07 · Marina' },
   { id: 'INC015', type: 'Crowd Anomaly', location: 'Sabarmati Riverfront, Ahmedabad', latitude: 23.0225, longitude: 72.5714, severity: 'MEDIUM', confidence: .81, density: 69, velocity: .39, status: 'ACTIVE', timestamp: '06:17', camera: 'Camera 16 · Riverfront' },
   { id: 'INC016', type: 'Traffic Accident', location: 'Tank Bund, Hyderabad', latitude: 17.4239, longitude: 78.4738, severity: 'LOW', confidence: .72, density: 29, velocity: .9, status: 'MONITORING', timestamp: '05:58', camera: 'Road Cam 15' },
-  { id: 'INC017', type: 'Public Gathering', location: 'India Gate, Delhi', latitude: 28.6129, longitude: 77.2295, severity: 'LOW', confidence: .75, density: 51, velocity: .65, status: 'MONITORING', timestamp: '05:36', camera: 'Camera 04 · Rajpath' },
+  { id: 'INC017', type: 'Public Gathering', location: 'India Gate, Delhi', latitude: 28.6129, longitude: 77.2295, severity: 'LOW', confidence: .75, density: 51, velocity: .65, status: 'MONITORING', timestamp: '05:36', camera: 'Camera 04 · Rajpath' }
 ]
+
 const severityOrder = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 }
 const apiBase = import.meta.env.VITE_API_BASE_URL || ''
-const INCIDENT_FOCUS_ZOOM = 11
+const INCIDENT_FOCUS_ZOOM = 15.5
 
 function sortIncidents(rows) {
   return [...rows].sort((a, b) => (severityOrder[(a.severity || '').toUpperCase()] ?? 9) - (severityOrder[(b.severity || '').toUpperCase()] ?? 9))
@@ -43,6 +63,7 @@ async function getIncidents() {
   const data = await response.json()
   return Array.isArray(data) ? data : data.incidents || []
 }
+
 async function getIncident(id) {
   const response = await fetch(`${apiBase}/incidents/${encodeURIComponent(id)}`)
   if (!response.ok) throw new Error(`Incident detail returned ${response.status}`)
@@ -52,52 +73,102 @@ async function getIncident(id) {
 function markerIcon(severity, selected) {
   const level = (severity || 'LOW').toUpperCase()
   const color = level === 'HIGH' || level === 'CRITICAL' ? '#f04452' : level === 'MEDIUM' ? '#f3a712' : '#16bd83'
-  return L.divIcon({ className: 'incident-marker-wrap', html: `<span class="incident-marker ${selected ? 'selected' : ''}" style="--marker-color:${color}"><span></span></span>`, iconSize: [34, 42], iconAnchor: [17, 34] })
+  return L.divIcon({
+    className: 'incident-marker-wrap',
+    html: `<span class="incident-marker ${selected ? 'selected' : ''}" style="--marker-color:${color}"><span></span></span>`,
+    iconSize: [20, 20],
+    iconAnchor: [10, 10]
+  })
 }
-function FocusMap({ incident }) {
+
+function FocusMap({ incident, resetKey }) {
   const map = useMap()
+
+  // Recenter to national overview when resetKey triggers
+  useEffect(() => {
+    if (!resetKey) return
+    map.flyTo([22.8, 79.1], 4.8, { duration: 0.85 })
+  }, [resetKey, map])
+
+  // Focus incident when clicked
   useEffect(() => {
     if (!incident || incident.latitude == null || incident.longitude == null || !Number.isFinite(Number(incident.latitude)) || !Number.isFinite(Number(incident.longitude))) return
     const center = [Number(incident.latitude), Number(incident.longitude)]
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) map.setView(center, INCIDENT_FOCUS_ZOOM, { animate: false })
-    else map.flyTo(center, INCIDENT_FOCUS_ZOOM, { duration: .28, easeLinearity: .25 })
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      map.setView(center, INCIDENT_FOCUS_ZOOM, { animate: false })
+    } else {
+      map.flyTo(center, INCIDENT_FOCUS_ZOOM, { duration: 1.05 })
+    }
   }, [incident, map])
   return null
 }
+
 const IncidentMarker = memo(function IncidentMarker({ item, selected, onSelect }) {
   const icon = useMemo(() => markerIcon(item.severity, selected), [item.severity, selected])
   return <Marker position={[item.latitude, item.longitude]} icon={icon} eventHandlers={{ click: () => onSelect(item) }}/>
 })
-function Severity({ level }) { return <span className={`severity severity-${(level || 'LOW').toLowerCase()}`}>{level || 'UNKNOWN'}</span> }
-function routeFromPath() { const path = window.location.pathname.replace(/\/$/, ''); return path === '' || path === '/' ? '/dashboard' : path }
-function getLocalTime() {
-  const now = new Date()
-  return { date: new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' }).format(now), time: new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: 'Asia/Kolkata' }).format(now) }
+
+function Severity({ level }) {
+  return <span className={`severity severity-${(level || 'LOW').toLowerCase()}`}>{level || 'UNKNOWN'}</span>
 }
 
-function App() {
+function routeFromPath() {
+  const path = window.location.pathname.replace(/\/$/, '')
+  return path === '' || path === '/' ? '/dashboard' : path
+}
+
+function getLocalTime() {
+  const now = new Date()
+  return {
+    date: new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' }).format(now),
+    time: new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: 'Asia/Kolkata' }).format(now)
+  }
+}
+
+export function App() {
   const [incidents, setIncidents] = useState([])
   const [selected, setSelected] = useState(null)
   const [filter, setFilter] = useState('ALL')
   const [route, setRoute] = useState(routeFromPath)
   const [source, setSource] = useState('loading')
-  const [error, setError] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
   const [satellite, setSatellite] = useState(false)
+  const [heatmap, setHeatmap] = useState(true)
   const [clock, setClock] = useState(getLocalTime)
   const [mapFocus, setMapFocus] = useState(null)
+  const [resetKey, setResetKey] = useState(0)
+  const [showTechnicalDetails, setShowTechnicalDetails] = useState(false)
+  const [navState, setNavState] = useState({})
   const knownIncidentIds = useRef(new Set())
 
+  // Initial Fetch & Route Listeners
   useEffect(() => {
     let live = true
-    getIncidents().then((rows) => { if (!live) return; const sorted = sortIncidents(rows); knownIncidentIds.current = new Set(sorted.map((item) => item.id)); setIncidents(sorted); setSource('api'); setError(''); setSelected(sorted.find((x) => x.id === 'INC001') || sorted[0] || null) }).catch((err) => { if (!live) return; knownIncidentIds.current = new Set(demoIncidents.map((item) => item.id)); setIncidents(demoIncidents); setSelected(demoIncidents[0]); setSource('demo'); setError(err.message) })
+    getIncidents().then((rows) => {
+      if (!live) return
+      const sorted = sortIncidents(rows)
+      knownIncidentIds.current = new Set(sorted.map((item) => item.id))
+      setIncidents(sorted)
+      setSource('api')
+      setSelected(sorted.find((x) => x.id === 'INC001') || sorted[0] || null)
+    }).catch(() => {
+      if (!live) return
+      knownIncidentIds.current = new Set(demoIncidents.map((item) => item.id))
+      setIncidents(demoIncidents)
+      setSelected(demoIncidents[0])
+      setSource('demo')
+    })
     const onPop = () => setRoute(routeFromPath())
     window.addEventListener('popstate', onPop)
-    return () => { live = false; window.removeEventListener('popstate', onPop) }
+    return () => {
+      live = false
+      window.removeEventListener('popstate', onPop)
+    }
   }, [])
+
+  // Live Refresh Loop
   useEffect(() => {
     if (source === 'loading') return
-    const reconnectingFromDemo = source === 'demo'
     let live = true
     let refreshing = false
     const refreshIncidents = async () => {
@@ -106,134 +177,458 @@ function App() {
       try {
         const rows = sortIncidents(await getIncidents())
         if (!live) return
-        if (reconnectingFromDemo) {
-          const newSinceDemo = rows.filter((item) => !knownIncidentIds.current.has(item.id))
-          knownIncidentIds.current = new Set(rows.map((item) => item.id))
-          setIncidents(rows)
-          const focusIncident = newSinceDemo[0]
-          setSelected(focusIncident || rows.find((item) => item.id === 'INC001') || rows[0] || null)
-          if (focusIncident) setMapFocus(focusIncident)
-          setSource('api')
-          setError('')
-          return
-        }
-        const known = knownIncidentIds.current
-        const newIncidents = rows.filter((item) => !known.has(item.id))
-        knownIncidentIds.current = new Set(rows.map((item) => item.id))
         setIncidents(rows)
-        if (newIncidents.length) {
-          const latest = newIncidents[0]
-          setSelected(latest)
-          setMapFocus(latest)
-        } else {
-          setSelected((current) => {
-            const updated = rows.find((item) => item.id === current?.id)
-            return updated && current ? { ...current, ...updated } : current
-          })
-        }
+        setSelected((current) => {
+          const updated = rows.find((item) => item.id === current?.id)
+          return updated && current ? { ...current, ...updated } : current
+        })
       } catch {
-        // Keep the last successful incident snapshot visible during temporary API interruptions.
+        // Keep current snapshot
       } finally {
         refreshing = false
       }
     }
     const timer = window.setInterval(refreshIncidents, 5000)
-    return () => { live = false; window.clearInterval(timer) }
+    return () => {
+      live = false
+      window.clearInterval(timer)
+    }
   }, [source])
+
+  // Live Clock
   useEffect(() => {
     const timer = window.setInterval(() => setClock(getLocalTime()), 1000)
     return () => window.clearInterval(timer)
   }, [])
+
+  // Deep detail load on selection
   useEffect(() => {
     if (source !== 'api' || !selected?.id) return
     let live = true
-    getIncident(selected.id).then((detail) => { if (live) setSelected((current) => current?.id === detail.id ? { ...current, ...detail } : current) }).catch(() => {})
+    getIncident(selected.id).then((detail) => {
+      if (live) setSelected((current) => current?.id === detail.id ? { ...current, ...detail } : current)
+    }).catch(() => {})
     return () => { live = false }
   }, [selected?.id, source])
 
-  const counts = useMemo(() => incidents.reduce((acc, i) => { const severity = (i.severity || 'LOW').toUpperCase(); acc.total++; acc[severity] = (acc[severity] || 0) + 1; return acc }, { total: 0 }), [incidents])
-  const visible = incidents.filter((i) => filter === 'ALL' || (i.severity || '').toUpperCase() === filter)
-  const activeCount = incidents.filter((i) => (i.status || '').toUpperCase() === 'ACTIVE').length
-  const [navState, setNavState] = useState({})
-  const navigate = (to, state = {}) => { window.history.pushState({}, '', to); setRoute(to); setNavState(state); setMenuOpen(false) }
-  const choose = useCallback((item) => { setSelected(item); setMapFocus(item); if (item.latitude != null && item.longitude != null) document.querySelector('.map-panel')?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'nearest' }) }, [])
-  const cycleFilter = () => setFilter((current) => ({ ALL: 'HIGH', HIGH: 'MEDIUM', MEDIUM: 'LOW', LOW: 'ALL' })[current] || 'ALL')
+  const counts = useMemo(() => incidents.reduce((acc, i) => {
+    const severity = (i.severity || 'LOW').toUpperCase()
+    acc.total++
+    acc[severity] = (acc[severity] || 0) + 1
+    return acc
+  }, { total: 0 }), [incidents])
 
-  const links = [
+  const visibleIncidents = incidents.filter((i) => filter === 'ALL' || (i.severity || '').toUpperCase() === filter)
+
+  const navigate = (to, state = {}) => {
+    window.history.pushState({}, '', to)
+    setRoute(to)
+    setNavState(state)
+    setMenuOpen(false)
+  }
+
+  const chooseIncident = useCallback((item) => {
+    setSelected(item)
+    setMapFocus({ ...item, _focusTs: Date.now() })
+  }, [])
+
+  const handleRecenter = useCallback(() => {
+    setSelected(null)
+    setMapFocus(null)
+    setResetKey((prev) => prev + 1)
+  }, [])
+
+  const navigationItems = [
     { path: '/dashboard', label: 'Dashboard', Icon: Layers3 },
     { path: '/evidence', label: 'Evidence Reconstruction', Icon: Video },
     { path: '/propagation', label: 'Information Propagation', Icon: Share2 },
-    { path: '/verification', label: 'Information Verification', Icon: Activity },
+    { path: '/verification', label: 'Verification', Icon: Activity },
     { path: '/advisories', label: 'Advisories', Icon: Bell }
   ]
-  return <div className="app-shell">
-    <header className="topbar">
-      <button className="mobile-menu" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle navigation" aria-expanded={menuOpen}><Menu size={21}/></button>
-      <div className="brand"><div className="brand-mark"><Shield size={26}/><span>✦</span></div><div><b>SURAKSHA</b><small>Public Safety Command Center</small></div></div>
-      <div className="page-heading"><h1>PUBLIC SAFETY COMMAND CENTER</h1><p>REAL-TIME INCIDENT MONITORING <i/> INDIA</p></div>
-      <div className="topbar-right"><div className={`live-card ${source}`}><span className="live-dot"/><b>{source === 'loading' ? 'CONNECTING' : source === 'api' ? 'CONNECTED' : 'DEMO MODE'}</b><small>{source === 'api' ? 'API · refresh 5s' : source === 'demo' ? 'Seeded incidents' : 'Loading incident feed'}</small></div><div className="date-card"><span>{clock.date}</span><b className="tabular-nums">{clock.time}</b></div></div>
-    </header>
-    {source === 'demo' && <div className="demo-banner"><AlertTriangle size={14}/> Demo data · API unavailable{error ? ` (${error})` : ''}</div>}
-    {menuOpen && <button className="nav-backdrop" aria-label="Close navigation" onClick={() => setMenuOpen(false)}/>}
-    <div className="workspace">
-      <aside className={`nav-rail ${menuOpen ? 'open' : ''}`}>
-        <nav>{links.map(({ path, label, Icon }) => <button key={path} className={`nav-item ${route === path ? 'active' : ''}`} onClick={() => navigate(path)}><Icon size={20}/><span>{label}</span></button>)}</nav>
-        <div className="nav-foot"><div className="foot-icon"><Activity size={21}/></div><span>India Safer<br/>Together</span><ChevronRight size={17}/></div>
-      </aside>
-      {route === '/evidence' ? (
-        <EvidenceReconstructionPage onNavigate={navigate} />
-      ) : route === '/propagation' ? (
-        <InformationPropagationPage onNavigate={navigate} />
-      ) : route === '/verification' ? (
-        <VerificationPage onNavigate={navigate} />
-      ) : route === '/advisories' ? (
-        <AdvisoriesPage onNavigate={navigate} prefillMessage={navState?.prefillMessage} />
-      ) : route !== '/dashboard' ? <main className="placeholder-page"><div className="placeholder-icon"><Shield size={28}/></div><span className="eyebrow">SURAKSHA · COMMAND CENTER</span><h2>{links.find((x) => x.path === route)?.label || 'Page'}</h2><p>This workspace is ready for the evidence, verification, and advisory modules.</p><button className="back-button" onClick={() => navigate('/dashboard')}>Return to dashboard <ChevronRight size={16}/></button></main> : <main className="dashboard">
-        <section className="dashboard-intro" aria-label="Dashboard overview">
-          <div><span className="intro-kicker"><i/> LIVE OPERATIONS <b>/{source === 'api' ? ' NATIONAL NETWORK' : source === 'demo' ? ' DEMO NETWORK' : ' CONNECTING'}</b></span><h2>Command overview</h2><p>See incidents as they unfold across India.</p></div>
-          <div className="intro-context"><span className="context-orbit"><Activity size={18}/></span><div><b>{activeCount} ACTIVE</b><small>INCIDENTS NEED ATTENTION</small></div></div>
-        </section>
-        <section className="metrics-grid">
-          <Metric title="TOTAL INCIDENTS" count={source === 'loading' ? '—' : counts.total} Icon={Layers3} tone="blue" note={source === 'loading' ? 'Loading' : `${counts.total} tracked`}/>
-          <Metric title="HIGH RISK" count={source === 'loading' ? '—' : (counts.HIGH || 0) + (counts.CRITICAL || 0)} Icon={Siren} tone="red" note={source === 'loading' ? 'Loading' : `${counts.CRITICAL || 0} critical`}/>
-          <Metric title="MEDIUM RISK" count={source === 'loading' ? '—' : counts.MEDIUM || 0} Icon={AlertTriangle} tone="amber" note={source === 'loading' ? 'Loading' : 'Needs attention'}/>
-          <Metric title="LOW RISK" count={source === 'loading' ? '—' : counts.LOW || 0} Icon={Shield} tone="green" note={source === 'loading' ? 'Loading' : 'Monitoring'}/>
-        </section>
-        <section className="main-grid">
-          <div className="map-panel panel">
-            <MapContainer center={[22.8, 79.1]} zoom={4.7} minZoom={4} maxZoom={13} zoomControl={false} scrollWheelZoom className="india-map">
-              <TileLayer attribution={satellite ? 'Tiles &copy; Esri' : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'} url={satellite ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}' : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'}/>
-              <ZoomControl position="topright"/><FocusMap incident={mapFocus}/>
-              {incidents.map((item) => item.latitude != null && item.longitude != null && Number.isFinite(Number(item.latitude)) && Number.isFinite(Number(item.longitude)) && <IncidentMarker key={item.id} item={item} selected={selected?.id === item.id} onSelect={choose}/>) }
-            </MapContainer>
-            <div className="map-tools"><button className={`map-mode ${!satellite ? 'active' : ''}`} onClick={() => setSatellite(false)}>Map</button><button className={`map-mode ${satellite ? 'active' : ''}`} onClick={() => setSatellite(true)}>Satellite</button><button className="locate-button" onClick={() => document.querySelector('.leaflet-control-zoom-in')?.click()} aria-label="Zoom map"><Crosshair size={18}/></button></div>
-            <div className="map-caption"><MapPin size={14}/><span>INDIA · NATIONAL INCIDENT MAP</span><span className="map-live"><i/> {source === 'api' ? 'CONNECTED' : source === 'demo' ? 'DEMO' : 'LOADING'}</span></div>
-            <div className="map-legend"><b>SEVERITY</b>{[['high','High Risk'],['medium','Medium Risk'],['low','Low Risk']].map(([key,label]) => <span key={key}><i className={`legend-dot ${key}`}/>{label}</span>)}</div>
-            <button className="map-list-button" onClick={() => document.querySelector('.incident-panel')?.scrollIntoView({ behavior: 'smooth' })}>View all incidents <List size={16}/></button>
+
+  return (
+    <div className="app-shell">
+      {/* Topbar with distinctive faceted brand mark, clean breathing room */}
+      <header className="topbar">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <button className="mobile-menu" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle navigation">
+            <Menu size={20} />
+          </button>
+          <div className="brand" onClick={() => navigate('/dashboard')}>
+            <div className="brand-mark">
+              <Shield size={24} />
+              <span>✦</span>
+            </div>
+            <div>
+              <b>SURAKSHA</b>
+              <small>Public Safety Command Center</small>
+            </div>
           </div>
-          <section className="incident-panel panel">
-            <div className="section-heading"><div><h2>ACTIVE INCIDENTS</h2><p>{incidents.length} monitored · {activeCount} requiring attention</p></div><button className={`icon-button ${filter !== 'ALL' ? 'filter-on' : ''}`} onClick={cycleFilter} aria-label={`Cycle incident severity filter; currently ${filter.toLowerCase()}`} title={`Severity filter: ${filter}`}><Filter size={17}/></button></div>
-            <div className="filter-tabs">{['ALL', ...(counts.CRITICAL ? ['CRITICAL'] : []), 'HIGH','MEDIUM','LOW'].map((f) => <button key={f} className={filter === f ? 'selected' : ''} onClick={() => setFilter(f)}>{f === 'ALL' ? `All (${incidents.length})` : `${f[0]}${f.slice(1).toLowerCase()} (${counts[f] || 0})`}</button>)}</div>
-            <div className="incident-list">{source === 'loading' ? <div className="loading-list" role="status" aria-label="Loading incidents">{[0,1,2,3].map((item) => <div className="loading-row" key={item} aria-hidden="true"><span/><div><i/><i/><i/></div><b/></div>)}</div> : visible.length ? visible.map((item) => <button key={item.id} className={`incident-row ${selected?.id === item.id ? 'chosen' : ''}`} onClick={() => choose(item)}>
-              <div className={`incident-thumb thumb-${item.severity?.toLowerCase()}`}><Camera size={19}/><span>{item.id.slice(-2)}</span></div><div className="incident-copy"><div className="incident-meta"><Severity level={item.severity}/><span className="incident-time"><Clock3 size={12}/>{item.timestamp || '—'}</span></div><b>{item.type}</b><span className="incident-place">{item.location}</span><small>{item.status || 'ACTIVE'}</small></div><div className="confidence"><b>{Math.round((item.confidence || 0) * 100)}%</b><small>confidence</small></div><ChevronRight className="row-arrow" size={16}/>
-            </button>) : <div className="empty-state">No incidents in this category.</div>}</div>
-          </section>
-          <aside className="detail-panel panel">
-            <div className="detail-header"><h2>INCIDENT DETAILS</h2><button onClick={() => setSelected(null)} aria-label="Clear selection"><X size={19}/></button></div>
-            {source === 'loading' ? <div className="empty-detail is-loading"><LoaderCircle size={26}/><b>Connecting to incident feed</b><span>Incident details will appear when data is ready.</span></div> : selected ? <>
-              <div className="camera-preview"><div className="camera-scene"><Users size={40}/><span className="crowd-lines">············<br/>············</span></div><span className={`camera-live ${source === 'demo' ? 'demo-feed' : ''}`}><i/>{source === 'demo' ? 'DEMO VISUAL' : 'NO LIVE FEED'}</span><div className="camera-label"><Video size={13}/>{selected.camera || 'Camera source unavailable'}</div></div>
-              <div className="detail-tags"><Severity level={selected.severity}/><span className={`status-pill status-${(selected.status || 'unknown').toLowerCase()}`}><i/>{selected.status || 'STATUS UNKNOWN'}</span></div>
-              <h3>{selected.type}</h3><div className="detail-location"><MapPin size={15}/>{selected.location}</div><p className="incident-description">{selected.description || 'Incident detected by the real-time monitoring system.'}</p>
-              <div className="detail-stats">{[[Camera,'Incident ID',selected.id || '—'],[Clock3,'Timestamp',selected.timestamp || '—'],[MapPin,'Location',selected.location || '—'],[Crosshair,'Latitude',Number.isFinite(Number(selected.latitude)) && selected.latitude !== null ? Number(selected.latitude).toFixed(4) : '—'],[Crosshair,'Longitude',Number.isFinite(Number(selected.longitude)) && selected.longitude !== null ? Number(selected.longitude).toFixed(4) : '—'],[Activity,'Confidence',selected.confidence == null ? '—' : `${Math.round(selected.confidence*100)}%`],[Users,'Crowd Density',selected.density == null ? '—' : `${selected.density}%`],[Activity,'Movement Velocity',selected.velocity == null ? '—' : `${selected.velocity} m/s`],[Shield,'Status',selected.status || '—']].map(([Icon,label,value]) => <div className="stat-row" key={label}><Icon size={14}/><span>{label}</span><b>{value}</b></div>)}</div>
-              <div className="quick-actions"><h4>QUICK ACTIONS <kbd>P4</kbd></h4><button onClick={() => navigate('/evidence')}><Video size={18}/>View Evidence<ChevronRight size={17}/></button><button onClick={() => navigate('/verification')}><Activity size={18}/>Verify Information<ChevronRight size={17}/></button><button onClick={() => navigate('/advisories')}><Bell size={18}/>Publish Advisory<ChevronRight size={17}/></button></div>
-            </> : <div className="empty-detail"><MapPin size={26}/><b>{incidents.length ? 'Select an incident' : 'No incidents available'}</b><span>{incidents.length ? 'Choose an incident from the map or list to inspect its details.' : 'There are no incidents in the current feed.'}</span></div>}
-          </aside>
-        </section>
-        <footer className="dashboard-footer"><span><Radio size={14}/> Incident monitoring workspace</span><span>{source === 'api' ? <><Check size={14}/> Connected to incident API</> : source === 'demo' ? 'Demo mode · seeded incident data' : 'Connecting to incident API…'}</span></footer>
-      </main>}
+        </div>
+
+        <div className="topbar-right">
+          {route === '/dashboard' && (
+            <button
+              className="topbar-recenter-btn"
+              onClick={handleRecenter}
+              title="Zoom out and recenter map to national overview"
+            >
+              <RotateCcw size={12} />
+              <span>Recenter</span>
+            </button>
+          )}
+          <div className={`live-card ${source}`}>
+            <span className="live-dot" />
+            <b>{source === 'loading' ? 'CONNECTING' : source === 'api' ? 'CONNECTED' : 'DEMO MODE'}</b>
+          </div>
+          <div className="date-card">
+            <span>{clock.date}</span>
+            <b>{clock.time}</b>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Workspace Layout */}
+      <div className="workspace">
+        {/* Navigation Rail with Suraksha rounded active items */}
+        <aside className={`nav-rail ${menuOpen ? 'open' : ''}`}>
+          <nav>
+            {navigationItems.map(({ path, label, Icon }) => (
+              <button
+                key={path}
+                className={`nav-item ${route === path ? 'active' : ''}`}
+                onClick={() => navigate(path)}
+              >
+                <Icon size={18} />
+                <span>{label}</span>
+              </button>
+            ))}
+          </nav>
+          <div className="nav-foot">
+            <Shield size={16} style={{ color: 'var(--lime-deep)' }} />
+            <span>Suraksha Command v2.4</span>
+          </div>
+        </aside>
+
+        {/* View Routing */}
+        {route === '/evidence' ? (
+          <EvidenceReconstructionPage onNavigate={navigate} />
+        ) : route === '/propagation' ? (
+          <InformationPropagationPage onNavigate={navigate} />
+        ) : route === '/verification' ? (
+          <VerificationPage onNavigate={navigate} />
+        ) : route === '/advisories' ? (
+          <AdvisoriesPage onNavigate={navigate} prefillMessage={navState?.prefillMessage} />
+        ) : (
+          /* Incident Dashboard with strong personality and clean editorial hierarchy */
+          <main className="dashboard">
+            {/* 4 Distinctive Suraksha Metric Cards with colored icon circles */}
+            <section className="metrics-grid">
+              <div className="metric-card blue">
+                <div className="metric-icon">
+                  <Layers3 size={20} />
+                </div>
+                <div className="metric-copy">
+                  <span>TOTAL MONITORED</span>
+                  <b>{source === 'loading' ? '—' : counts.total}</b>
+                </div>
+              </div>
+
+              <div className="metric-card red">
+                <div className="metric-icon">
+                  <Siren size={20} />
+                </div>
+                <div className="metric-copy">
+                  <span>HIGH RISK</span>
+                  <b>{source === 'loading' ? '—' : (counts.HIGH || 0) + (counts.CRITICAL || 0)}</b>
+                </div>
+              </div>
+
+              <div className="metric-card amber">
+                <div className="metric-icon">
+                  <AlertTriangle size={20} />
+                </div>
+                <div className="metric-copy">
+                  <span>MEDIUM RISK</span>
+                  <b>{source === 'loading' ? '—' : counts.MEDIUM || 0}</b>
+                </div>
+              </div>
+
+              <div className="metric-card green">
+                <div className="metric-icon">
+                  <Shield size={20} />
+                </div>
+                <div className="metric-copy">
+                  <span>LOW / ROUTINE</span>
+                  <b>{source === 'loading' ? '—' : counts.LOW || 0}</b>
+                </div>
+              </div>
+            </section>
+
+            {/* Main 3-Column Layout */}
+            <section className="main-grid">
+              {/* Map Panel (Visual Anchor) */}
+              <div className="panel map-panel">
+                <div className="map-tools">
+                  <button
+                    className={`map-mode ${!satellite ? 'active' : ''}`}
+                    onClick={() => setSatellite(false)}
+                  >
+                    Map
+                  </button>
+                  <button
+                    className={`map-mode ${satellite ? 'active' : ''}`}
+                    onClick={() => setSatellite(true)}
+                  >
+                    Satellite
+                  </button>
+                  <button
+                    className={`map-mode ${heatmap ? 'active' : ''}`}
+                    onClick={() => setHeatmap((prev) => !prev)}
+                    title="Toggle Severity Heatmap Overlay"
+                    style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                  >
+                    <span style={{
+                      width: 7,
+                      height: 7,
+                      borderRadius: '50%',
+                      background: heatmap ? '#ef4444' : '#94a3b8',
+                      boxShadow: heatmap ? '0 0 6px rgba(239, 68, 68, 0.8)' : 'none'
+                    }} />
+                    <span>Heatmap</span>
+                  </button>
+                  <button
+                    className="map-mode"
+                    onClick={handleRecenter}
+                    title="Zoom out and recenter map to national overview"
+                    style={{ display: 'flex', alignItems: 'center', gap: 5 }}
+                  >
+                    <RotateCcw size={12} />
+                    <span>Recenter</span>
+                  </button>
+                </div>
+
+                <MapContainer
+                  center={[22.8, 79.1]}
+                  zoom={4.8}
+                  minZoom={4}
+                  maxZoom={18}
+                  zoomControl={false}
+                  scrollWheelZoom
+                  className="india-map"
+                >
+                  <TileLayer
+                    attribution="&copy; OpenStreetMap"
+                    url={satellite
+                      ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                      : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+                    }
+                  />
+                  <ZoomControl position="bottomright" />
+                  <FocusMap incident={mapFocus} resetKey={resetKey} />
+                  <HeatmapLayer incidents={incidents} visible={heatmap} />
+                  {incidents.map((item) =>
+                    item.latitude != null && item.longitude != null && Number.isFinite(Number(item.latitude)) && (
+                      <IncidentMarker
+                        key={item.id}
+                        item={item}
+                        selected={selected?.id === item.id}
+                        onSelect={chooseIncident}
+                      />
+                    )
+                  )}
+                </MapContainer>
+              </div>
+
+              {/* Center Panel: Active Incidents List with Camera Thumb Tiles */}
+              <div className="panel" style={{ display: 'flex', flexDirection: 'column' }}>
+                <div className="section-heading">
+                  <h2>ACTIVE INCIDENTS</h2>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{visibleIncidents.length} listed</span>
+                </div>
+
+                <div className="filter-tabs">
+                  {['ALL', 'HIGH', 'MEDIUM', 'LOW'].map((tab) => (
+                    <button
+                      key={tab}
+                      className={filter === tab ? 'selected' : ''}
+                      onClick={() => setFilter(tab)}
+                    >
+                      {tab === 'ALL' ? 'All' : tab.charAt(0) + tab.slice(1).toLowerCase()}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="incident-list">
+                  {visibleIncidents.map((item) => {
+                    const isSelected = selected?.id === item.id
+                    return (
+                      <button
+                        key={item.id}
+                        className={`incident-row ${isSelected ? 'chosen' : ''}`}
+                        onClick={() => chooseIncident(item)}
+                      >
+                        <div className={`incident-thumb thumb-${(item.severity || 'low').toLowerCase()}`}>
+                          <Camera size={16} />
+                          <span>{item.id.slice(-2)}</span>
+                        </div>
+
+                        <div className="incident-copy">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <Severity level={item.severity} />
+                            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{item.timestamp}</span>
+                          </div>
+                          <b>{item.type}</b>
+                          <span className="incident-place">{item.location}</span>
+                        </div>
+
+                        <div className="confidence">
+                          <b>{Math.round((item.confidence || 0) * 100)}%</b>
+                          <small>conf.</small>
+                        </div>
+                        <ChevronRight className="row-arrow" size={14} />
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Right Panel: Selected Incident Summary with Strong Editorial Hierarchy */}
+              <div className="panel detail-panel">
+                <div className="detail-header">
+                  <h2>INCIDENT INSPECTION</h2>
+                  {selected && (
+                    <button
+                      onClick={() => setSelected(null)}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 2 }}
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+
+                {selected ? (
+                  <>
+                    {/* CRT Camera Visual Preview */}
+                    <div className="camera-preview">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: 0.85 }}>
+                        <Users size={32} />
+                        <span style={{ fontSize: 13, letterSpacing: 2 }}>········</span>
+                      </div>
+                      <span className="camera-live">
+                        <i /> LIVE FEED
+                      </span>
+                      <div className="camera-label">
+                        <Video size={11} style={{ marginRight: 4 }} />
+                        {selected.camera || 'Camera Feed'}
+                      </div>
+                    </div>
+
+                    {/* Dominant Editorial Incident Hero */}
+                    <div className="detail-hero-box">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <Severity level={selected.severity} />
+                        <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                          ● {selected.status || 'ACTIVE'}
+                        </span>
+                      </div>
+                      <h3 className="detail-headline">{selected.type}</h3>
+                      <div className="detail-location-row">
+                        <MapPin size={12} style={{ color: 'var(--lime-deep)' }} />
+                        <span>{selected.location}</span>
+                        <span>·</span>
+                        <span style={{ fontVariantNumeric: 'tabular-nums' }}>{selected.timestamp} IST</span>
+                      </div>
+                      <p className="detail-desc">
+                        {selected.description || 'Elevated crowd density detected by real-time computer vision.'}
+                      </p>
+                    </div>
+
+                    {/* Key Telemetry Summary Box */}
+                    <div className="detail-key-metrics">
+                      <div className="detail-metric-item">
+                        <span>Crowd Density</span>
+                        <b>{selected.density != null ? `${selected.density}%` : '86%'}</b>
+                      </div>
+                      <div className="detail-metric-item">
+                        <span>Movement Flow</span>
+                        <b>{selected.velocity != null ? `${selected.velocity} m/s` : '0.24 m/s'}</b>
+                      </div>
+                      <div className="detail-metric-item">
+                        <span>AI Confidence</span>
+                        <b>{selected.confidence != null ? `${Math.round(selected.confidence * 100)}%` : '91%'}</b>
+                      </div>
+                      <div className="detail-metric-item">
+                        <span>Camera Unit</span>
+                        <b style={{ fontSize: 11 }}>{selected.camera?.split('·')[0] || 'Cam 03'}</b>
+                      </div>
+                    </div>
+
+                    {/* Characterful Suraksha Action Buttons */}
+                    <div className="quick-actions-box">
+                      <button className="quick-action-btn primary" onClick={() => navigate('/evidence')}>
+                        <Video size={16} />
+                        <span>View Evidence Reconstruction</span>
+                        <ChevronRight size={14} />
+                      </button>
+                      <button className="quick-action-btn" onClick={() => navigate('/verification')}>
+                        <Activity size={16} />
+                        <span>Verify Public Reports</span>
+                        <ChevronRight size={14} />
+                      </button>
+                      <button className="quick-action-btn" onClick={() => navigate('/advisories')}>
+                        <Bell size={16} />
+                        <span>Publish Citizen Advisory</span>
+                        <ChevronRight size={14} />
+                      </button>
+                    </div>
+
+                    {/* Progressive Disclosure: Secondary Technical Metadata */}
+                    <div className="tech-details-box">
+                      <button
+                        className="tech-details-toggle"
+                        onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
+                      >
+                        <span>{showTechnicalDetails ? '– Hide Technical Parameters' : '+ Technical Parameters & Logs'}</span>
+                        {showTechnicalDetails ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                      </button>
+
+                      {showTechnicalDetails && (
+                        <div className="tech-details-content">
+                          <div className="tech-row">
+                            <span>Incident ID</span>
+                            <b>{selected.id}</b>
+                          </div>
+                          <div className="tech-row">
+                            <span>Camera Stream</span>
+                            <b>{selected.camera || 'CCTV Network'}</b>
+                          </div>
+                          <div className="tech-row">
+                            <span>Coordinates</span>
+                            <b>{Number(selected.latitude).toFixed(4)}, {Number(selected.longitude).toFixed(4)}</b>
+                          </div>
+                          <div className="tech-row">
+                            <span>CV Pipeline</span>
+                            <b>YOLOv8 + Farneback Optical Flow</b>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="empty-detail-box">
+                    <MapPin size={24} style={{ color: 'var(--text-muted)' }} />
+                    <b>Select an Incident</b>
+                    <p>Click on any marker on the map or incident list to inspect live evidence and dispatch responses.</p>
+                  </div>
+                )}
+              </div>
+            </section>
+          </main>
+        )}
+      </div>
     </div>
-  </div>
+  )
 }
 
-function Metric({ title, count, Icon, tone, note }) { return <article className={`metric-card ${tone}`}><div className="metric-icon"><Icon size={23}/></div><div className="metric-copy"><span>{title}</span><div><b>{count}</b><small>{note}</small></div></div><div className="metric-spark">↗</div></article> }
 export default App
