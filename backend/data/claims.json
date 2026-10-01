@@ -16,8 +16,11 @@
     "location": "Gate 3",
     "source": "Citizen",
     "timestamp": "18:24",
-    "status": "UNVERIFIED",
-    "confidence": 0.28
+    "status": "VERIFIED",
+    "confidence": 0.28,
+    "validated_by": "Authority",
+    "note": "Validated by Safety Authority Command console: multi-source media consensus confirms claim.",
+    "updated_at": "11:37:24"
   },
   {
     "id": "CLM003",

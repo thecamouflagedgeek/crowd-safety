@@ -44,6 +44,16 @@
       "time": "08:13",
       "event": "Official advisory published: Severe congestion detected near Gate 3. Avoid the area until further notice.",
       "source": "Public Safety Command Authority"
+    },
+    {
+      "time": "11:37",
+      "event": "Authority marked CLM002 as VERIFIED",
+      "source": "Authority Validation"
+    },
+    {
+      "time": "11:37",
+      "event": "Official advisory published: Severe congestion detected near Gate 3. Avoid the area until further notice.",
+      "source": "Public Safety Command Authority"
     }
   ],
   "INC002": [
