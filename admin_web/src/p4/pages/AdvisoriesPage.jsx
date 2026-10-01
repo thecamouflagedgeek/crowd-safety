@@ -20,7 +20,7 @@ export function AdvisoriesPage({ onNavigate, prefillMessage }) {
         <div className="p4-header-info">
           <span className="p4-badge-tag">EMERGENCY PUBLIC BROADCAST SERVICE</span>
           <h1 className="p4-page-title">
-            <Bell size={24} style={{ color: 'var(--p4-accent-red)' }} />
+            <Bell size={24} style={{ color: 'var(--ink)' }} />
             OFFICIAL ADVISORY PUBLISHING
           </h1>
           <p className="p4-page-subtitle">
@@ -30,8 +30,7 @@ export function AdvisoriesPage({ onNavigate, prefillMessage }) {
 
         <div style={{ display: 'flex', gap: 10 }}>
           <button
-            className="p4-btn p4-btn-primary"
-            style={{ width: 'auto', padding: '9px 16px', fontSize: 11 }}
+            className="p4-ink-btn"
             onClick={() => onNavigate('/evidence')}
           >
             <span>BACK TO EVIDENCE RECONSTRUCTION</span>

@@ -168,7 +168,7 @@ export function VerificationMatrix({
 
       {/* Main Verification Grid: Two Columns (Left: Claim & Source Matrix, Right: All Sources Media Dossier) */}
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.15fr) minmax(0, 1.25fr)', gap: 16, alignItems: 'start' }}>
-        
+
         {/* Left Column: Claim Statement & Evidence Agreement Matrix */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div className="p4-matrix-box">

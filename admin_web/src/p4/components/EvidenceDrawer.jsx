@@ -119,13 +119,12 @@ export function EvidenceDrawer({ item, onClose, onNavigateVerify }) {
 
         {/* Footer Actions */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginTop: 4 }}>
-          <button className="p4-cctv-btn" onClick={onClose}>
+          <button className="p4-outline-btn" style={{ padding: '8px 16px' }} onClick={onClose}>
             DISMISS
           </button>
           {onNavigateVerify && (
             <button
-              className="p4-btn p4-btn-primary"
-              style={{ width: 'auto', padding: '9px 18px', fontSize: 11 }}
+              className="p4-ink-btn"
               onClick={() => {
                 onClose()
                 onNavigateVerify(item)

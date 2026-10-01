@@ -24,7 +24,7 @@ export function InformationPropagationPage({ onNavigate }) {
         <div className="p4-header-info">
           <span className="p4-badge-tag">CONVERGENCE GRAPH INTELLIGENCE</span>
           <h1 className="p4-page-title">
-            <Share2 size={24} style={{ color: 'var(--p4-accent-lime)' }} />
+            <Share2 size={24} style={{ color: 'var(--ink)' }} />
             INFORMATION PROPAGATION
           </h1>
           <p className="p4-page-subtitle">
@@ -34,8 +34,7 @@ export function InformationPropagationPage({ onNavigate }) {
 
         <div style={{ display: 'flex', gap: 10 }}>
           <button
-            className="p4-btn p4-btn-primary"
-            style={{ width: 'auto', padding: '9px 16px', fontSize: 11 }}
+            className="p4-ink-btn"
             onClick={() => onNavigate('/verification')}
           >
             <span>PROCEED TO VERIFICATION MATRIX</span>
@@ -52,48 +51,49 @@ export function InformationPropagationPage({ onNavigate }) {
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
         gap: 12,
-        background: 'rgba(13, 21, 36, 0.7)',
-        padding: '12px 18px',
-        borderRadius: 12,
-        border: '1px solid var(--p4-panel-border)'
+        background: 'var(--surface)',
+        padding: '14px 20px',
+        borderRadius: 'var(--panel-radius)',
+        border: '1px solid var(--border)',
+        boxShadow: 'var(--card-shadow)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(59, 130, 246, 0.2)', display: 'grid', placeItems: 'center', color: '#60a5fa', fontWeight: 800, fontSize: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 30, height: 30, borderRadius: 8, background: 'var(--lime-soft)', display: 'grid', placeItems: 'center', color: 'var(--lime-deep)', fontWeight: 800, fontSize: 13, border: '1px solid var(--lime-border)' }}>
             1
           </div>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#fff' }}>Optical Inception</div>
-            <div style={{ fontSize: 10, color: 'var(--p4-text-muted)' }}>CCTV 01 & 02 detect surge</div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--ink)' }}>Optical Inception</div>
+            <div style={{ fontSize: 11, color: 'var(--ink-secondary)' }}>CCTV 01 & 02 detect surge</div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(245, 158, 11, 0.2)', display: 'grid', placeItems: 'center', color: '#fbbf24', fontWeight: 800, fontSize: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 30, height: 30, borderRadius: 8, background: '#fef3c7', display: 'grid', placeItems: 'center', color: '#92400e', fontWeight: 800, fontSize: 13, border: '1px solid #fde68a' }}>
             2
           </div>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#fff' }}>Human Signal</div>
-            <div style={{ fontSize: 10, color: 'var(--p4-text-muted)' }}>Citizen report C014 corroborates</div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--ink)' }}>Human Signal</div>
+            <div style={{ fontSize: 11, color: 'var(--ink-secondary)' }}>Citizen C014 corroborates</div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(163, 230, 53, 0.2)', display: 'grid', placeItems: 'center', color: '#bef264', fontWeight: 800, fontSize: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 30, height: 30, borderRadius: 8, background: 'var(--lime-soft)', display: 'grid', placeItems: 'center', color: 'var(--lime-deep)', fontWeight: 800, fontSize: 13, border: '1px solid var(--lime-border)' }}>
             3
           </div>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#fff' }}>Convergence Hub</div>
-            <div style={{ fontSize: 10, color: 'var(--p4-text-muted)' }}>INC001 synthesized at 91%</div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--ink)' }}>Convergence Hub</div>
+            <div style={{ fontSize: 11, color: 'var(--ink-secondary)' }}>INC001 synthesized at 91%</div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(16, 185, 129, 0.2)', display: 'grid', placeItems: 'center', color: '#34d399', fontWeight: 800, fontSize: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 30, height: 30, borderRadius: 8, background: '#d1fae5', display: 'grid', placeItems: 'center', color: '#065f46', fontWeight: 800, fontSize: 13, border: '1px solid #a7f3d0' }}>
             4
           </div>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#fff' }}>Authority Validation</div>
-            <div style={{ fontSize: 10, color: 'var(--p4-text-muted)' }}>Gate 3 congestion verified</div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--ink)' }}>Authority Validation</div>
+            <div style={{ fontSize: 11, color: 'var(--ink-secondary)' }}>Gate 3 congestion verified</div>
           </div>
         </div>
       </div>

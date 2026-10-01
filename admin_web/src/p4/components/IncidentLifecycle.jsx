@@ -15,8 +15,8 @@ export function IncidentLifecycle({ currentStep = 'VERIFIED', incidentId = 'INC0
 
   return (
     <div className="p4-lifecycle-strip">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginRight: 8, paddingRight: 8, borderRight: '1px solid rgba(255,255,255,0.1)' }}>
-        <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--p4-accent-lime)', fontFamily: 'var(--p4-font-mono)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginRight: 8, paddingRight: 10, borderRight: '1px solid var(--border)' }}>
+        <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--ink)', fontFamily: 'var(--font-title)', letterSpacing: '0.06em' }}>
           {incidentId} LIFECYCLE
         </span>
       </div>
@@ -29,14 +29,16 @@ export function IncidentLifecycle({ currentStep = 'VERIFIED', incidentId = 'INC0
           <React.Fragment key={step.key}>
             <div className={`p4-lifecycle-step ${isPast ? 'completed' : ''} ${isCurrent ? 'active' : ''}`}>
               {isPast ? (
-                <Check size={13} style={{ color: 'var(--p4-accent-lime)' }} />
+                <Check size={13} style={{ color: 'var(--lime-deep)' }} />
               ) : (
-                <Icon size={12} style={{ color: isCurrent ? 'var(--p4-accent-blue)' : 'var(--p4-text-muted)' }} />
+                <Icon size={12} style={{ color: isCurrent ? 'var(--ink)' : 'var(--ink-muted)' }} />
               )}
-              <span>{step.label}</span>
-              <small style={{ fontSize: 9, opacity: 0.65, fontWeight: 400 }}>({step.desc})</small>
+              <span style={{ color: isCurrent ? 'var(--ink)' : isPast ? 'var(--ink)' : 'var(--ink-secondary)', fontWeight: isCurrent ? 800 : 700 }}>
+                {step.label}
+              </span>
+              <small style={{ fontSize: 9.5, opacity: 0.8, color: 'var(--ink-muted)' }}>({step.desc})</small>
             </div>
-            {idx < steps.length - 1 && <span className="p4-lifecycle-arrow">→</span>}
+            {idx < steps.length - 1 && <span className="p4-lifecycle-arrow" style={{ color: 'var(--border)' }}>→</span>}
           </React.Fragment>
         )
       })}
